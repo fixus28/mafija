@@ -28,12 +28,17 @@ sistem ih drži ugašenim.
 
 Node 20+, TypeScript strict svuda, Socket.IO 4, React 18 + Vite 6, Tailwind v4
 (tokeni u `client/src/index.css` kroz `@theme`). Server dev: `tsx watch`.
+Video (od faze 5): LiveKit (`livekit-server-sdk` na serveru,
+`@livekit/components-react` + `livekit-client` na klijentu).
 
 ```
 npm install                # koren, jednom
 npm run dev:server         # port 3001
 npm run dev:client         # port 5173
 npm run typecheck -w @mafija/server   # (i -w @mafija/client)
+
+# za video lokalno (van repoa, jednom preuzeto):
+C:\Users\Legion\tools\livekit\livekit-server.exe --dev   # port 7880, devkey/secret
 ```
 
 ## Dizajn
@@ -142,9 +147,29 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
   - Preduslov za ovo bio je `packages/client/src/socket.ts` da u produkciji
     gađa `window.location.origin` umesto hardkodovanog `:3001`
     (`import.meta.env.DEV` provera) + `vite-env.d.ts`.
-- **SLEDEĆE (faza 5): LiveKit** (self-hosted, Docker) + video grid. HTTPS
-  koji sad radi je bio preduslov (LiveKit/WebRTC to zahteva) — teren je
-  spreman.
+- **U TOKU (faza 5): LiveKit + video grid.**
+  - **Gotovo:** osnovna konekcija radi end-to-end, testirano uživo (4 taba,
+    lažne kamere, stvaran WebRTC/RTP saobraćaj kroz LiveKit SFU, 0% gubitka
+    paketa, bez grešaka u konzoli).
+    - Server: `packages/server/src/livekit.ts` pravi kratkotrajni JWT
+      (`AccessToken` iz `livekit-server-sdk`) po igraču/sobi; novi
+      Socket.IO event `livekit:token` (u `index.ts`). Podrazumevane
+      vrednosti (`devkey`/`secret`/`ws://localhost:7880`) odgovaraju
+      lokalnom `livekit-server --dev` — u produkciji se sve troje
+      postavlja preko `LIVEKIT_URL`/`LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`.
+    - Klijent: `components/VideoRoom.tsx` (`@livekit/components-react` +
+      `livekit-client`) — trazi token, renderuje `GridLayout` sa
+      `ParticipantTile` i rucne `TrackToggle` dugmice za kameru/mikrofon.
+      Ukljucen u `Game.tsx`, trenutno UVEK vidljiv dok je partija u toku
+      (bez faznog gasenja — to je sledeci korak, faza 6).
+    - Lokalni razvoj BEZ Dockera: `livekit-server.exe` (standalone binarni
+      fajl, van repoa) u `C:\Users\Legion\tools\livekit\`, pokrece se
+      `livekit-server --dev` pored `npm run dev:server`/`dev:client`.
+  - **Otvoreno:** LiveKit-ov `GridLayout` na uskom `max-w-md` layoutu
+    paginira po 2 učesnika po strani (vidljivo sa 4+ igrača) — treba
+    razmisliti o širem/drugačijem rasporedu za video kad partija ima do 12
+    igrača. Deployment LiveKit-a na VPS (treći servis u `docker-compose.yml`,
+    UDP portovi u firewall-u, `.env` sa pravim kljucevima) nije još urađen.
 - Faza 6: server preko LiveKit API-ja pali/gasi dozvole kamera po
   fazama, privatni audio kanal mafije noću, TTS narator.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno).

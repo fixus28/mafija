@@ -39,6 +39,16 @@ export interface VotePayload {
   targetId: string | null;
 }
 
+/** Odgovor na zahtev za LiveKit token — odvojeno od RoomActionResult jer nosi drugacija polja. */
+export interface LiveKitTokenResult {
+  ok: boolean;
+  error?: string;
+  /** JWT za povezivanje na LiveKit sobu. */
+  token?: string;
+  /** Adresa LiveKit servera (razlicita za razvoj i produkciju). */
+  url?: string;
+}
+
 /** Dogadjaji koje klijent salje serveru. */
 export interface ClientToServerEvents {
   "room:create": (
@@ -61,6 +71,8 @@ export interface ClientToServerEvents {
     payload: VotePayload,
     ack: (res: RoomActionResult) => void,
   ) => void;
+  /** Trazi token za pridruzivanje LiveKit sobi koja odgovara trenutnoj sobi igre. */
+  "livekit:token": (ack: (res: LiveKitTokenResult) => void) => void;
 }
 
 export interface RolePayload {

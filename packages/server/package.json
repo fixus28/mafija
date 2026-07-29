@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@mafija/shared": "*",
+    "livekit-server-sdk": "^2.17.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

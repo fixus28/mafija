@@ -10,6 +10,7 @@ import { socket } from "../socket";
 import { useCountdown } from "../useCountdown";
 import { NIGHT_ACTIVE_ROLES, NIGHT_PROMPT, ROLE_DESCRIPTION, ROLE_LABEL } from "../roles";
 import PlayerPicker from "./PlayerPicker";
+import VideoRoom from "./VideoRoom";
 
 interface Props {
   room: PublicRoomState;
@@ -71,6 +72,8 @@ export default function Game({ room, myId, role, detectiveResults, narratorLog, 
           <span className="font-mono text-sm text-paper-dim">{formatSeconds(seconds)}</span>
         )}
       </div>
+
+      <VideoRoom />
 
       {role && <RoleReminder role={role} />}
 

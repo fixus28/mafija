@@ -18,6 +18,7 @@ import {
   type Room,
 } from "./roomManager";
 import { createGameEngine } from "./phaseMachine";
+import { createLiveKitToken, getLiveKitUrl } from "./livekit";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -138,6 +139,21 @@ io.on("connection", (socket) => {
     const room = binding ? getRoom(binding.code) : undefined;
     if (!binding || !room) return ack({ ok: false, error: "Nisi ni u jednoj sobi." });
     ack(game.submitVote(room, binding.sessionId, payload.targetId));
+  });
+
+  socket.on("livekit:token", async (ack) => {
+    const binding = getBindingForSocket(socket.id);
+    const room = binding ? getRoom(binding.code) : undefined;
+    const me = binding && room ? room.players.get(binding.sessionId) : undefined;
+    if (!room || !me) return ack({ ok: false, error: "Nisi ni u jednoj sobi." });
+
+    try {
+      const token = await createLiveKitToken(room.code, me.publicId, me.name);
+      ack({ ok: true, token, url: getLiveKitUrl() });
+    } catch (err) {
+      console.error("[livekit] neuspesno pravljenje tokena:", err);
+      ack({ ok: false, error: "Video server trenutno nije dostupan." });
+    }
   });
 
   socket.on("disconnect", () => {

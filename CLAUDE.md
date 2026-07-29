@@ -126,19 +126,25 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `shared/src/constants.ts` su procena; da li lekar/mafija smeju da
     biraju sebe za metu nije ograničeno; glasanje za sebe je onemogućeno
     samo u UI, ne i na serveru.
-- **U TOKU (faza 4: VPS + HTTPS).** Cilj: da se partija može odigrati uživo
-  sa pravim ljudima, svako od kuće, pre nego sto se uopste doda video.
-  - **Gotovo:** `deploy/` na korenu repoa (Dockerfile.server, Dockerfile.client
-    sa Caddy-jem za auto-HTTPS + reverse proxy `/socket.io/*` → server,
-    docker-compose.yml, `.env.example`, `DEPLOY.md` sa Hetzner uputstvom).
-    `packages/client/src/socket.ts` sad gadja `window.location.origin` u
-    produkciji (umesto hardkodovanog `:3001`); dodat `vite-env.d.ts`.
-    Typecheck i `npm run build -w @mafija/client` prolaze.
-  - **Sledeće (na korisniku — nalog/pristup koje ja nemam):** kreirati
-    Hetzner server, podesiti DNS/DuckDNS domen, preneti kod (git ili scp —
-    repo TRENUTNO NIJE git inicijalizovan, treba odlučiti pre ovog koraka),
-    `docker compose up -d --build`, test uživo sa više ljudi/mreža.
-- Faza 5: LiveKit (self-hosted, Docker) + video grid.
+- **GOTOVO (faza 4: VPS + HTTPS).** Igra je uživo na pravom internetu, van
+  developerskog računara — testirano preko dva razdvojena uređaja/mreže
+  (laptop + telefon na mobilnim podacima), soba i lista igrača rade.
+  - **Deployment:** Hetzner VPS (Nürnberg, Ubuntu 24.04), Docker Compose sa
+    dva servisa — `server` (Node/tsx, samo interno, bez izloženih portova)
+    i `web` (Caddy: servira build klijenta, reverse-proxy `/socket.io/*` →
+    server, automatski HTTPS preko Let's Encrypt). Definicije u `deploy/`
+    na korenu repoa (`Dockerfile.server`, `Dockerfile.client`, `Caddyfile`,
+    `docker-compose.yml`, `.env.example`, uputstvo u `deploy/DEPLOY.md`).
+  - **Domen:** `mafija-fixus.duckdns.org` (DuckDNS) → IP servera.
+  - **Repo:** github.com/fixus28/mafija (grana `main`).
+  - **Update procedura:** lokalno `git push` na GitHub, pa na serveru
+    `cd /root/mafija && git pull && cd deploy && docker compose up -d --build`.
+  - Preduslov za ovo bio je `packages/client/src/socket.ts` da u produkciji
+    gađa `window.location.origin` umesto hardkodovanog `:3001`
+    (`import.meta.env.DEV` provera) + `vite-env.d.ts`.
+- **SLEDEĆE (faza 5): LiveKit** (self-hosted, Docker) + video grid. HTTPS
+  koji sad radi je bio preduslov (LiveKit/WebRTC to zahteva) — teren je
+  spreman.
 - Faza 6: server preko LiveKit API-ja pali/gasi dozvole kamera po
   fazama, privatni audio kanal mafije noću, TTS narator.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno).

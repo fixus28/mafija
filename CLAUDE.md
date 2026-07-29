@@ -147,32 +147,55 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
   - Preduslov za ovo bio je `packages/client/src/socket.ts` da u produkciji
     gađa `window.location.origin` umesto hardkodovanog `:3001`
     (`import.meta.env.DEV` provera) + `vite-env.d.ts`.
-- **U TOKU (faza 5): LiveKit + video grid.**
-  - **Gotovo:** osnovna konekcija radi end-to-end, testirano uživo (4 taba,
-    lažne kamere, stvaran WebRTC/RTP saobraćaj kroz LiveKit SFU, 0% gubitka
-    paketa, bez grešaka u konzoli).
-    - Server: `packages/server/src/livekit.ts` pravi kratkotrajni JWT
-      (`AccessToken` iz `livekit-server-sdk`) po igraču/sobi; novi
-      Socket.IO event `livekit:token` (u `index.ts`). Podrazumevane
-      vrednosti (`devkey`/`secret`/`ws://localhost:7880`) odgovaraju
-      lokalnom `livekit-server --dev` — u produkciji se sve troje
-      postavlja preko `LIVEKIT_URL`/`LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`.
-    - Klijent: `components/VideoRoom.tsx` (`@livekit/components-react` +
-      `livekit-client`) — trazi token, renderuje `GridLayout` sa
-      `ParticipantTile` i rucne `TrackToggle` dugmice za kameru/mikrofon.
-      Ukljucen u `Game.tsx`, trenutno UVEK vidljiv dok je partija u toku
-      (bez faznog gasenja — to je sledeci korak, faza 6).
-    - Lokalni razvoj BEZ Dockera: `livekit-server.exe` (standalone binarni
-      fajl, van repoa) u `C:\Users\Legion\tools\livekit\`, pokrece se
-      `livekit-server --dev` pored `npm run dev:server`/`dev:client`.
-  - **Otvoreno:** LiveKit-ov `GridLayout` na uskom `max-w-md` layoutu
-    paginira po 2 učesnika po strani (vidljivo sa 4+ igrača) — treba
-    razmisliti o širem/drugačijem rasporedu za video kad partija ima do 12
-    igrača. Deployment LiveKit-a na VPS (treći servis u `docker-compose.yml`,
-    UDP portovi u firewall-u, `.env` sa pravim kljucevima) nije još urađen.
-- Faza 6: server preko LiveKit API-ja pali/gasi dozvole kamera po
-  fazama, privatni audio kanal mafije noću, TTS narator.
-- Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno).
+- **GOTOVO — logika (faze 5+6 spojene):** video + fazna automatika,
+  testirano uživo (7 tabova, lažne kamere, pravi WebRTC/RTP kroz LiveKit
+  SFU kroz više noći/dana zaredom, bez grešaka u konzoli).
+  - Server: `packages/server/src/livekit.ts` — `createLiveKitToken`
+    (glavna soba, kod sobe kao naziv) i `createMafiaChannelToken`
+    (zasebna soba `"<kod>:mafija"` za privatni noćni kanal). Token za
+    glavnu sobu se pravi SA početnim pravima za trenutnu fazu (ne
+    "uvek sve dozvoljeno"); `setMainRoomPublishPermission` preko
+    `RoomServiceClient.updateParticipant` uživo menja prava dok je
+    igrač već povezan (server je autoritativan — i pošten klijent sam
+    gasi trake, ali ovo je stvarna prepreka izmenjenom klijentu).
+    `phaseMachine.ts` zove `syncVideoPermissions` posle SVAKE promene
+    faze (`setPhase`, uklj. `endGame` koji sad prolazi kroz `setPhase`).
+  - Deljeno pravilo u `packages/shared/src/video.ts`
+    (`computeVideoPermission({phase, alive, silenced})`) — koristi ga
+    i server (za `updateParticipant`/token) i klijent (da odmah reaguje
+    bez čekanja mreže), jedno mesto za logiku "kamera+mikrofon samo
+    tokom DAY_DISCUSSION/MINI_DISCUSSION; ućutkan zadržava kameru, gubi
+    mikrofon; mrtvi nemaju ništa".
+  - Mafijin privatni kanal (`socket.emit("livekit:mafiaToken")`, novi
+    `MafiaChannel.tsx`): server izdaje token SAMO MAFIA/ACCOMPLICE, samo
+    dok je faza NIGHT, samo ako partner još postoji — prava granica je
+    JWT potpisan tajnim ključem (civil fizički ne može da dobije token
+    za tu sobu, bez obzira šta klijent radi). Komponenta se montira
+    samo dok traje NIGHT, sama se diskonektuje kad noć prođe.
+  - TTS narator: `client/src/tts.ts` (`speakNarratorMessage`) — čita
+    svaku `narrator:message` naglas preko ugrađenog Web Speech API-ja
+    (`sr-RS`), bez ijedne nove zavisnosti.
+  - **Poznata sitnica iz biblioteke:** `<TrackToggle disabled={...}>` iz
+    `@livekit/components-react` NE prosleđuje `disabled` na stvarni
+    `<button>` (proverено outerHTML-om) — "nedozvoljeno" dugme se zato
+    simulira ručno (`style={{pointerEvents:"none"}}` + zatamnjena
+    klasa) umesto pravog HTML `disabled` atributa.
+  - **Nedovršeno (namerno, ovo je "logika" prolaz — izgled dolazi
+    posle):** `VideoRoom`/`MafiaChannel` koriste LiveKit-ov podrazumevani
+    izgled (`GridLayout`/`ParticipantTile`/`TrackToggle` sa minimalnim
+    Tailwind stilom) — korisnik će nacrtati/opisati kako treba da
+    izgleda pa se to uklapa u posebnom prolazu. `GridLayout` na uskom
+    `max-w-md` layoutu paginira po 2 učesnika — verovatno se menja u
+    tom redizajnu. Deployment LiveKit-a na VPS (treći servis u
+    `docker-compose.yml`, UDP portovi u firewall-u, `.env` sa pravim
+    ključevima) nije još urađen — sledi faza 7.
+  - Lokalni razvoj BEZ Dockera: `livekit-server.exe` (standalone
+    binarni fajl, van repoa) u `C:\Users\Legion\tools\livekit\`,
+    pokreće se `livekit-server --dev` pored `npm run dev:server`/`dev:client`.
+- **SLEDEĆE: izgled videa** — korisnik šalje skicu/opis željenog
+  rasporeda kamera (uklopiti u noir dizajn), pa se `VideoRoom`/
+  `MafiaChannel` prepravljaju da to prate.
+- Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
 
 ## Konvencije rada
 

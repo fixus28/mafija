@@ -7,6 +7,7 @@ import {
   RESOLUTION_DISPLAY_SECONDS,
   ROLE_REVEAL_SECONDS,
   VOTING_SECONDS,
+  computeVideoPermission,
   type ClientToServerEvents,
   type GamePhase,
   type Role,
@@ -18,6 +19,7 @@ import { assignRoles } from "./game/roles";
 import { resolveNight } from "./game/night";
 import { applyElimination, resolveVote } from "./game/voting";
 import { checkWinCondition, type WinResult } from "./game/winCondition";
+import { setMainRoomPublishPermission } from "./livekit";
 import {
   emptyNightActions,
   findPlayerByPublicId,
@@ -26,6 +28,15 @@ import {
   type Room,
 } from "./roomManager";
 
+/** Trenutna video prava igraca prema deljenim pravilima iz @mafija/shared. */
+export function videoPermissionFor(room: Room, player: Player) {
+  return computeVideoPermission({
+    phase: room.phase,
+    alive: player.alive,
+    silenced: player.sessionId === room.silencedSessionId,
+  });
+}
+
 /**
  * Orkestracija faza partije: zove cist engine iz `./game/*` i njegove
  * rezultate primenjuje na `Room` (mutacija + Socket.IO emitovanje).
@@ -33,6 +44,15 @@ import {
  * tajmere i mrezu za nju.
  */
 export function createGameEngine(io: Server<ClientToServerEvents, ServerToClientEvents>) {
+  /** Uzivo prepisuje LiveKit prava svih igraca da odgovaraju trenutnoj fazi. */
+  async function syncVideoPermissions(room: Room) {
+    await Promise.all(
+      [...room.players.values()].map((p) =>
+        setMainRoomPublishPermission(room.code, p.publicId, videoPermissionFor(room, p)),
+      ),
+    );
+  }
+
   function broadcastState(room: Room) {
     io.to(room.code).emit("room:state", toPublicState(room));
   }
@@ -65,6 +85,8 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     room.phase = phase;
     room.phaseEndsAt = durationMs === null ? null : Date.now() + durationMs;
     broadcastState(room);
+    // Ne cekamo LiveKit (mrezni poziv) da bismo nastavili partiju — greske su vec uhvacene unutra.
+    void syncVideoPermissions(room);
     if (durationMs !== null) {
       room.phaseTimer = setTimeout(() => advancePhase(room), durationMs);
     }
@@ -202,14 +224,11 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
   }
 
   function endGame(room: Room, winner: WinResult) {
-    clearPhaseTimer(room);
-    room.phase = "GAME_OVER";
-    room.phaseEndsAt = null;
     narrate(
       room,
       winner === "TOWN" ? "Grad je pobedio! Mafija je poražena." : "Mafija je pobedila! Grad je pao.",
     );
-    broadcastState(room);
+    setPhase(room, "GAME_OVER", null);
   }
 
   function buildRolePayload(

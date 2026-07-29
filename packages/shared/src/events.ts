@@ -73,6 +73,12 @@ export interface ClientToServerEvents {
   ) => void;
   /** Trazi token za pridruzivanje LiveKit sobi koja odgovara trenutnoj sobi igre. */
   "livekit:token": (ack: (res: LiveKitTokenResult) => void) => void;
+  /**
+   * Trazi token za privatni nocni audio kanal mafije i dame. Server ga
+   * daje samo MAFIA/ACCOMPLICE, samo dok je faza NIGHT, samo ako oboje
+   * (jos) postoje u igri.
+   */
+  "livekit:mafiaToken": (ack: (res: LiveKitTokenResult) => void) => void;
 }
 
 export interface RolePayload {

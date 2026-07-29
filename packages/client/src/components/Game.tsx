@@ -11,6 +11,7 @@ import { useCountdown } from "../useCountdown";
 import { NIGHT_ACTIVE_ROLES, NIGHT_PROMPT, ROLE_DESCRIPTION, ROLE_LABEL } from "../roles";
 import PlayerPicker from "./PlayerPicker";
 import VideoRoom from "./VideoRoom";
+import MafiaChannel from "./MafiaChannel";
 
 interface Props {
   room: PublicRoomState;
@@ -73,7 +74,12 @@ export default function Game({ room, myId, role, detectiveResults, narratorLog, 
         )}
       </div>
 
-      <VideoRoom />
+      <VideoRoom room={room} myId={myId} />
+
+      {role &&
+        (role.role === "MAFIA" || role.role === "ACCOMPLICE") &&
+        role.partner &&
+        room.phase === "NIGHT" && <MafiaChannel />}
 
       {role && <RoleReminder role={role} />}
 

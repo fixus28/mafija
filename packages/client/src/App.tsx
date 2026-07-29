@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DetectiveResultPayload, PublicRoomState, RolePayload } from "@mafija/shared";
 import { getSessionId, socket } from "./socket";
+import { speakNarratorMessage } from "./tts";
 import Home from "./components/Home";
 import Lobby from "./components/Lobby";
 import Game from "./components/Game";
@@ -29,8 +30,10 @@ export default function App() {
     const onRole = (payload: RolePayload) => setRole(payload);
     const onDetectiveResult = (payload: DetectiveResultPayload) =>
       setDetectiveResults((prev) => [payload, ...prev]);
-    const onNarratorMessage = (payload: { text: string }) =>
+    const onNarratorMessage = (payload: { text: string }) => {
       setNarratorLog((prev) => [payload.text, ...prev]);
+      speakNarratorMessage(payload.text);
+    };
 
     /**
      * Poziva se pri svakom (re)konektu socketa. Ako smo pre pada bili

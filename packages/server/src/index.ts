@@ -17,8 +17,8 @@ import {
   toPublicState,
   type Room,
 } from "./roomManager";
-import { createGameEngine } from "./phaseMachine";
-import { createLiveKitToken, getLiveKitUrl } from "./livekit";
+import { createGameEngine, videoPermissionFor } from "./phaseMachine";
+import { createLiveKitToken, createMafiaChannelToken, getLiveKitUrl } from "./livekit";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -148,10 +148,36 @@ io.on("connection", (socket) => {
     if (!room || !me) return ack({ ok: false, error: "Nisi ni u jednoj sobi." });
 
     try {
-      const token = await createLiveKitToken(room.code, me.publicId, me.name);
+      const token = await createLiveKitToken(room.code, me.publicId, me.name, videoPermissionFor(room, me));
       ack({ ok: true, token, url: getLiveKitUrl() });
     } catch (err) {
       console.error("[livekit] neuspesno pravljenje tokena:", err);
+      ack({ ok: false, error: "Video server trenutno nije dostupan." });
+    }
+  });
+
+  socket.on("livekit:mafiaToken", async (ack) => {
+    const binding = getBindingForSocket(socket.id);
+    const room = binding ? getRoom(binding.code) : undefined;
+    const me = binding && room ? room.players.get(binding.sessionId) : undefined;
+    if (!room || !me) return ack({ ok: false, error: "Nisi ni u jednoj sobi." });
+    if (!me.alive) return ack({ ok: false, error: "Mrtvi nemaju pristup." });
+    if (room.phase !== "NIGHT") {
+      return ack({ ok: false, error: "Privatni kanal je dostupan samo noću." });
+    }
+    if (me.role !== "MAFIA" && me.role !== "ACCOMPLICE") {
+      return ack({ ok: false, error: "Nemaš pristup ovom kanalu." });
+    }
+    const hasPartner = [...room.players.values()].some(
+      (p) => p !== me && p.alive && (p.role === "MAFIA" || p.role === "ACCOMPLICE"),
+    );
+    if (!hasPartner) return ack({ ok: false, error: "Nema partnera za privatni kanal." });
+
+    try {
+      const token = await createMafiaChannelToken(room.code, me.publicId, me.name);
+      ack({ ok: true, token, url: getLiveKitUrl() });
+    } catch (err) {
+      console.error("[livekit] neuspesno pravljenje mafijaškog tokena:", err);
       ack({ ok: false, error: "Video server trenutno nije dostupan." });
     }
   });

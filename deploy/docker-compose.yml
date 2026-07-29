@@ -1,0 +1,27 @@
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    restart: unless-stopped
+    # Namerno bez "ports": serveru pristupa samo Caddy, iznutra
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - caddy_data:/data      # ovde Caddy cuva sertifikate
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

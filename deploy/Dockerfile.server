@@ -1,0 +1,7 @@
+# Game server: Node + Socket.IO (pokrece se kroz tsx, kao i u razvoju)
+FROM node:22-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci
+EXPOSE 3001
+CMD ["npx", "tsx", "packages/server/src/index.ts"]

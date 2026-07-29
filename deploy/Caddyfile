@@ -1,0 +1,15 @@
+{$DOMAIN} {
+	encode gzip
+
+	# Sav Socket.IO saobracaj ide game serveru (interno ime servisa iz compose-a)
+	handle /socket.io/* {
+		reverse_proxy server:3001
+	}
+
+	# Sve ostalo: React aplikacija (SPA fallback na index.html)
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

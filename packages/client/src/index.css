@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/*
+ * Dizajn tokeni — noir salon: topli dim, stari papir,
+ * pecatni crveni vosak i mesing. Kod sobe je "pecat" — potpis dizajna.
+ */
+@theme {
+  --color-smoke-950: #16110d;
+  --color-smoke-900: #1e1712;
+  --color-smoke-800: #2a211a;
+  --color-smoke-700: #3d2f24;
+
+  --color-paper: #ece0c8;
+  --color-paper-dim: #a89a80;
+
+  --color-seal: #9e2b25;
+  --color-seal-bright: #c4372e;
+
+  --color-brass: #c8a24b;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html {
+  background: var(--color-smoke-950);
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-paper);
+  /* Blaga vinjeta — dim prostorije, bez slika i bez troska */
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #241b13 0%, transparent 60%),
+    var(--color-smoke-950);
+  min-height: 100vh;
+}
+
+/* Vidljiv fokus za tastaturu, u boji mesinga */
+:focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

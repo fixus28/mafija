@@ -1,0 +1,9 @@
+{
+  "name": "mafija",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev:server": "npm run dev -w @mafija/server",
+    "dev:client": "npm run dev -w @mafija/client"
+  }
+}

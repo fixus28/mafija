@@ -1,4 +1,5 @@
-import type { NarratorSoundId } from "@mafija/shared";
+import type { NarratorMessagePayload, NarratorSoundId } from "@mafija/shared";
+import { speakNarratorMessage } from "./tts";
 
 /**
  * Snimljene naratorove fraze — fajlovi zive u public/narrator/ (Vite ih
@@ -18,13 +19,12 @@ const SOUND_FILES: Record<NarratorSoundId, string> = {
 };
 
 /**
- * Pokusava da pusti snimljenu frazu. Vraca true ako je pustanje zaista
- * zapocelo (pozivalac onda NE treba da padne na TTS) — false ako fajl
- * (jos) ne postoji ili je pustanje odbijeno (npr. browser jos nije
- * registrovao interakciju korisnika). Slusamo i "error" na elementu i
- * play() promise, jer browseri razlicito prijavljuju 404 na izvoru.
+ * Pokusava da pusti snimljenu frazu i ceka da se ZAISTA zavrsi (ne samo da
+ * pocne) — bitno je da se sledeca fraza u redu (vidi enqueueNarratorAudio)
+ * ne pusti preko ove. Vraca true ako je pustanje uspelo, false ako fajl
+ * (jos) ne postoji ili je pustanje odbijeno.
  */
-export function playNarratorSound(sound: NarratorSoundId): Promise<boolean> {
+function playNarratorSound(sound: NarratorSoundId): Promise<boolean> {
   return new Promise((resolve) => {
     const audio = new Audio(SOUND_FILES[sound]);
     let settled = false;
@@ -33,10 +33,28 @@ export function playNarratorSound(sound: NarratorSoundId): Promise<boolean> {
       settled = true;
       resolve(ok);
     };
+    audio.addEventListener("ended", () => finish(true));
     audio.addEventListener("error", () => finish(false));
-    audio
-      .play()
-      .then(() => finish(true))
-      .catch(() => finish(false));
+    audio.play().catch(() => finish(false));
+  });
+}
+
+/**
+ * Naratorove poruke mogu da stignu jedna za drugom u istom trenu (npr.
+ * "grad je presudio X" pa odmah "mafija je pobedila" — obe posledica istog
+ * glasanja). Ako bismo obe pustili odmah, njihov zvuk bi se preklopio i
+ * druga bi ispala "nemuštа". Zato se sve pusta kroz jedan red — sledeca
+ * ceka da prethodna STVARNO zavrsi (snimak do kraja ili TTS do kraja).
+ */
+let queue: Promise<void> = Promise.resolve();
+
+export function enqueueNarratorAudio(payload: NarratorMessagePayload): void {
+  queue = queue.then(async () => {
+    if (payload.sound) {
+      const played = await playNarratorSound(payload.sound);
+      if (played) return;
+    }
+    // Ako snimljena fraza (jos) ne postoji na disku ili je pustanje odbijeno, padamo na TTS.
+    await speakNarratorMessage(payload.text);
   });
 }

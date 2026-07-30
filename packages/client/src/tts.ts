@@ -28,11 +28,19 @@ function findSerbianVoice(): SpeechSynthesisVoice | null {
   return prefixed ?? null;
 }
 
-export function speakNarratorMessage(text: string): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "sr-RS";
-  const voice = findSerbianVoice();
-  if (voice) utterance.voice = voice;
-  window.speechSynthesis.speak(utterance);
+/** Vraca se tek kad izgovor stvarno zavrsi — bitno za red cekanja u narratorAudio.ts. */
+export function speakNarratorMessage(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      resolve();
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "sr-RS";
+    const voice = findSerbianVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
 }

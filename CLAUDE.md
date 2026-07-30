@@ -198,10 +198,11 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `shared/constants.ts`) ide na server (`photo:submit`) i vraća se
     svima kroz `PublicPlayer.photoUrl` u `room:state`.
   - **`PhotoGrid.tsx`** — deljena komponenta: galerija (foto ili inicijal
-    ako slika još nije stigla) u istom 2-red rasporedu. Koristi je i
-    `VideoRoom` (van diskusije) i `PlayerPicker` (biranje mete
-    noću/glasanje — sad su to klikabilne fotografije, ne dugmad sa
-    tekstom). Mrtvi igrači dobijaju crveni "✕" preko fotografije
+    ako slika još nije stigla) u istom 2-red rasporedu. `VideoRoom` je
+    JEDINO mesto koje je renderuje — van diskusije prikazuje ili prostu
+    (neklikabilnu) galeriju svih igrača, ili — kad je prosleđen `picker`
+    prop (noćna akcija/glasanje) — istu galeriju kao klikabilnu, sa
+    izabranom metom. Mrtvi igrači dobijaju crveni "✕" preko fotografije
     (`showDead` prop) — automatski, čim `alive` postane `false`, ne
     treba posebna "reveal" logika.
   - **Mafijin kanal sad ima i video** (ne samo audio) — mafija i dama se
@@ -226,6 +227,31 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     nedosledno, nije nužno pogrešno. Deployment LiveKit-a na VPS (treći
     servis u `docker-compose.yml`, UDP portovi u firewall-u, `.env` sa
     pravim ključevima) nije još urađen — sledi faza 7.
+- **GOTOVO — druga runda ispravki posle prvog uživo testiranja izgleda
+  videa** (5 primedbi, sve rešene):
+  - Ukinuta duplirana galerija slika u toku noći/glasanja — `VideoRoom`
+    sad prima opcioni `picker` prop ({players, selected, onSelect}) i
+    SAM postaje klikabilna galerija kad je akcija u toku; `Game.tsx` više
+    ne renderuje posebnu galeriju ispod (stari `PlayerPicker.tsx` je
+    obrisan, postao je mrtav kod). Prompt tekst ("Koga lečiš večeras?"/
+    "Za koga glasaš?") stoji iznad `VideoRoom`-a, status/greška/skip
+    dugme ispod (`PhaseStatusPanel` u `Game.tsx`).
+  - **Pravi bag sa naratorovim zvukom:** kad ista faza istovremeno
+    proizvede DVE naratorove poruke (npr. "grad je presudio X" pa odmah
+    "mafija je pobedila" — oba iz `resolveVotingPhase`/`resolveNightPhase`
+    pa `endGame` u `phaseMachine.ts`), obe su se puštale ODMAH i
+    preklapale, pa se druga nije čula. Ispravka: `narratorAudio.ts` sad
+    ima red čekanja (`enqueueNarratorAudio`) — svaka fraza (snimak ili
+    TTS fallback) čeka da se PRETHODNA stvarno završi
+    (`ended`/`onend`, ne samo da počne) pre nego što krene sledeća.
+    `speakNarratorMessage` u `tts.ts` je zbog ovoga postao `Promise`.
+  - `RoleReminder` (tvoja uloga) sad renderuje IZNAD `VideoRoom`-a, ne
+    ispod.
+  - Narator sekcija u `Game.tsx` prikazuje SAMO najnoviju poruku — cela
+    istorija (`narratorLog` niz) je uklonjena, `App.tsx` sad drži samo
+    `narratorMessage: string | null`.
+  - `Roster` (spisak "Za stolom" na dnu `Game.tsx`) je obrisan — imena
+    već stoje ispod fotografija u galeriji.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
 
 ## Konvencije rada

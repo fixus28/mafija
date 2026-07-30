@@ -9,13 +9,22 @@ import {
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Track } from "livekit-client";
-import { computeVideoPermission, type PublicRoomState } from "@mafija/shared";
+import { computeVideoPermission, type PublicPlayer, type PublicRoomState } from "@mafija/shared";
 import { socket } from "../socket";
 import PhotoGrid from "./PhotoGrid";
+
+/** Ako je prosledjeno, PhotoGrid van diskusije postaje klikabilna galerija za akciju (nocni cilj/glas)
+ * umesto pasivnog prikaza svih igraca — tako nema dve odvojene galerije za istu stvar na ekranu. */
+interface PickerConfig {
+  players: PublicPlayer[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+}
 
 interface Props {
   room: PublicRoomState;
   myId: string;
+  picker?: PickerConfig;
 }
 
 const DISCUSSING_PHASES = new Set(["DAY_DISCUSSION", "MINI_DISCUSSION"]);
@@ -24,10 +33,12 @@ const DISCUSSING_PHASES = new Set(["DAY_DISCUSSION", "MINI_DISCUSSION"]);
  * Kamera/mikrofon soba preko LiveKit-a — konekcija ostaje otvorena kroz
  * celu partiju, samo se prava za objavljivanje menjaju uzivo po fazi.
  * Tokom diskusije prikazuje pravi (uzivo) video svih igraca na jednoj
- * strani (fiksno 2 reda, bez listanja); van diskusije prikazuje njihove
- * pocetne selfie fotografije na istom mestu (mrtvi precrtani crvenim X).
+ * strani (fiksno 2 reda, bez listanja); van diskusije prikazuje selfie
+ * fotografije na istom mestu (mrtvi precrtani crvenim X) — ako je "picker"
+ * prosledjen, ta ista galerija je i klikabilna (birana meta), pa nema
+ * duplikata sa odvojenim panelom ispod.
  */
-export default function VideoRoom({ room, myId }: Props) {
+export default function VideoRoom({ room, myId, picker }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +85,13 @@ export default function VideoRoom({ room, myId }: Props) {
         {discussing ? (
           <LiveVideoGrid />
         ) : (
-          <PhotoGrid players={room.players} myId={myId} showDead />
+          <PhotoGrid
+            players={picker ? picker.players : room.players}
+            myId={myId}
+            selected={picker?.selected}
+            onSelect={picker?.onSelect}
+            showDead={!picker}
+          />
         )}
       </div>
       {discussing && (

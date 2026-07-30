@@ -6,8 +6,7 @@ import type {
   RolePayload,
 } from "@mafija/shared";
 import { getSessionId, socket } from "./socket";
-import { playNarratorSound } from "./narratorAudio";
-import { speakNarratorMessage } from "./tts";
+import { enqueueNarratorAudio } from "./narratorAudio";
 import Home from "./components/Home";
 import Lobby from "./components/Lobby";
 import Game from "./components/Game";
@@ -18,7 +17,7 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [role, setRole] = useState<RolePayload | null>(null);
   const [detectiveResults, setDetectiveResults] = useState<DetectiveResultPayload[]>([]);
-  const [narratorLog, setNarratorLog] = useState<string[]>([]);
+  const [narratorMessage, setNarratorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const onState = (state: PublicRoomState) => setRoom(state);
@@ -29,7 +28,7 @@ export default function App() {
       setMyId(null);
       setRole(null);
       setDetectiveResults([]);
-      setNarratorLog([]);
+      setNarratorMessage(null);
       setNotice(reason);
     };
 
@@ -37,15 +36,8 @@ export default function App() {
     const onDetectiveResult = (payload: DetectiveResultPayload) =>
       setDetectiveResults((prev) => [payload, ...prev]);
     const onNarratorMessage = (payload: NarratorMessagePayload) => {
-      setNarratorLog((prev) => [payload.text, ...prev]);
-      // Ako snimljena fraza (jos) ne postoji na disku, padamo na TTS.
-      if (payload.sound) {
-        playNarratorSound(payload.sound).then((played) => {
-          if (!played) speakNarratorMessage(payload.text);
-        });
-      } else {
-        speakNarratorMessage(payload.text);
-      }
+      setNarratorMessage(payload.text);
+      enqueueNarratorAudio(payload);
     };
 
     /**
@@ -104,7 +96,7 @@ export default function App() {
     setMyId(null);
     setRole(null);
     setDetectiveResults([]);
-    setNarratorLog([]);
+    setNarratorMessage(null);
   };
 
   if (room && myId) {
@@ -117,7 +109,7 @@ export default function App() {
         myId={myId}
         role={role}
         detectiveResults={detectiveResults}
-        narratorLog={narratorLog}
+        narratorMessage={narratorMessage}
         onLeave={exitRoom}
       />
     );

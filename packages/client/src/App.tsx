@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
-import type { DetectiveResultPayload, PublicRoomState, RolePayload } from "@mafija/shared";
+import type {
+  DetectiveResultPayload,
+  NarratorMessagePayload,
+  PublicRoomState,
+  RolePayload,
+} from "@mafija/shared";
 import { getSessionId, socket } from "./socket";
+import { playNarratorSound } from "./narratorAudio";
 import { speakNarratorMessage } from "./tts";
 import Home from "./components/Home";
 import Lobby from "./components/Lobby";
@@ -30,9 +36,16 @@ export default function App() {
     const onRole = (payload: RolePayload) => setRole(payload);
     const onDetectiveResult = (payload: DetectiveResultPayload) =>
       setDetectiveResults((prev) => [payload, ...prev]);
-    const onNarratorMessage = (payload: { text: string }) => {
+    const onNarratorMessage = (payload: NarratorMessagePayload) => {
       setNarratorLog((prev) => [payload.text, ...prev]);
-      speakNarratorMessage(payload.text);
+      // Ako snimljena fraza (jos) ne postoji na disku, padamo na TTS.
+      if (payload.sound) {
+        playNarratorSound(payload.sound).then((played) => {
+          if (!played) speakNarratorMessage(payload.text);
+        });
+      } else {
+        speakNarratorMessage(payload.text);
+      }
     };
 
     /**

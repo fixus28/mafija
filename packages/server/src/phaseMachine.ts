@@ -10,6 +10,7 @@ import {
   computeVideoPermission,
   type ClientToServerEvents,
   type GamePhase,
+  type NarratorSoundId,
   type Role,
   type RolePayload,
   type RoomActionResult,
@@ -57,8 +58,8 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     io.to(room.code).emit("room:state", toPublicState(room));
   }
 
-  function narrate(room: Room, text: string) {
-    io.to(room.code).emit("narrator:message", { text });
+  function narrate(room: Room, text: string, sound?: NarratorSoundId) {
+    io.to(room.code).emit("narrator:message", { text, sound });
   }
 
   function currentRoles(room: Room): Map<string, Role> {
@@ -152,11 +153,15 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     }
 
     if (result.killed) {
-      narrate(room, `Nova žrtva noći: ${room.players.get(result.killed)?.name ?? "nepoznat igrač"}.`);
+      narrate(
+        room,
+        `Nova žrtva noći: ${room.players.get(result.killed)?.name ?? "nepoznat igrač"}.`,
+        "night_victim",
+      );
     } else if (result.savedByDoctor) {
-      narrate(room, "Ove noći je bio pokušaj ubistva — meta je spašena.");
+      narrate(room, "Ove noći je bio pokušaj ubistva — meta je spašena.", "night_saved");
     } else {
-      narrate(room, "Ova noć je prošla mirno.");
+      narrate(room, "Ova noć je prošla mirno.", "night_calm");
     }
 
     room.nightActions = emptyNightActions();
@@ -184,7 +189,11 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
       const names = voteOutcome.candidates
         .map((id) => room.players.get(id)?.name ?? "igrač")
         .join(", ");
-      narrate(room, `Nerešeno između: ${names}. Sledi kratka diskusija pa novo glasanje — samo medju njima.`);
+      narrate(
+        room,
+        `Nerešeno između: ${names}. Sledi kratka diskusija pa novo glasanje — samo medju njima.`,
+        "vote_tie",
+      );
       setPhase(room, "MINI_DISCUSSION", MINI_DISCUSSION_SECONDS * 1000);
       return;
     }
@@ -195,9 +204,9 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     if (eliminatedId) {
       const eliminated = room.players.get(eliminatedId);
       if (eliminated) eliminated.alive = false;
-      narrate(room, `Grad je presudio: ${eliminated?.name ?? "igrač"} napušta selo.`);
+      narrate(room, `Grad je presudio: ${eliminated?.name ?? "igrač"} napušta selo.`, "vote_eliminated");
     } else {
-      narrate(room, "Grad je odlučio da danas niko ne napušta selo.");
+      narrate(room, "Grad je odlučio da danas niko ne napušta selo.", "vote_skipped");
     }
 
     const outcome = applyElimination(roles, eliminatedId);
@@ -227,6 +236,7 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     narrate(
       room,
       winner === "TOWN" ? "Grad je pobedio! Mafija je poražena." : "Mafija je pobedila! Grad je pao.",
+      winner === "TOWN" ? "town_wins" : "mafia_wins",
     );
     setPhase(room, "GAME_OVER", null);
   }

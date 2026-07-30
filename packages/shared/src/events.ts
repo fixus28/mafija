@@ -95,6 +95,27 @@ export interface DetectiveResultPayload {
   isMafia: boolean;
 }
 
+/**
+ * Identifikuje snimljenu naratorovu frazu koju treba pustiti uz poruku
+ * (umesto TTS-a). Fiksni deo recenice je snimljen unapred; ime igraca (kad
+ * postoji) se NE izgovara — samo prikazuje tekstom u naratorovom logu.
+ */
+export type NarratorSoundId =
+  | "night_victim"
+  | "night_saved"
+  | "night_calm"
+  | "vote_eliminated"
+  | "vote_skipped"
+  | "vote_tie"
+  | "town_wins"
+  | "mafia_wins";
+
+export interface NarratorMessagePayload {
+  text: string;
+  /** Ako postoji, klijent pusta ovaj snimak; ako ga (jos) nema, pada na TTS. */
+  sound?: NarratorSoundId;
+}
+
 /** Dogadjaji koje server salje klijentima. */
 export interface ServerToClientEvents {
   /** Kompletno javno stanje sobe — emituje se svima posle svake promene. */
@@ -106,5 +127,5 @@ export interface ServerToClientEvents {
   /** Privatno, samo policajcu — rezultat provere posle noci. */
   "game:detectiveResult": (payload: DetectiveResultPayload) => void;
   /** Javna naratorova objava (rezultat noci, glasanja, kraj igre...). */
-  "narrator:message": (payload: { text: string }) => void;
+  "narrator:message": (payload: NarratorMessagePayload) => void;
 }

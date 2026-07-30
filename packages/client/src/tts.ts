@@ -1,7 +1,38 @@
-/** Cita naratorovu poruku naglas preko ugradjenog Web Speech API-ja (bez novih zavisnosti). */
+/**
+ * Cita naratorovu poruku naglas preko ugradjenog Web Speech API-ja (bez
+ * novih zavisnosti). Sam "lang" na utterance-u ne garantuje da ce browser
+ * izabrati odgovarajuci glas — zato eksplicitno trazimo srpski glas, ako
+ * ga OS ima instaliran (bez njega, TTS pokusava da cita srpski tekst
+ * engleskim glasom, sto zvuci najgore).
+ */
+
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+function loadVoices(): SpeechSynthesisVoice[] {
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) cachedVoices = voices;
+  return cachedVoices;
+}
+
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  // Chrome/Edge ucitavaju glasove asinhrono - lista je prazna dok se ovaj event ne desi.
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function findSerbianVoice(): SpeechSynthesisVoice | null {
+  const voices = cachedVoices.length > 0 ? cachedVoices : loadVoices();
+  const exact = voices.find((v) => v.lang.toLowerCase() === "sr-rs");
+  if (exact) return exact;
+  const prefixed = voices.find((v) => v.lang.toLowerCase().startsWith("sr"));
+  return prefixed ?? null;
+}
+
 export function speakNarratorMessage(text: string): void {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "sr-RS";
+  const voice = findSerbianVoice();
+  if (voice) utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
 }

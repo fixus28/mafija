@@ -39,6 +39,11 @@ export interface VotePayload {
   targetId: string | null;
 }
 
+export interface PhotoSubmitPayload {
+  /** Selfie kao data URL (JPEG, umanjen na klijentu pre slanja). */
+  dataUrl: string;
+}
+
 /** Odgovor na zahtev za LiveKit token — odvojeno od RoomActionResult jer nosi drugacija polja. */
 export interface LiveKitTokenResult {
   ok: boolean;
@@ -79,6 +84,11 @@ export interface ClientToServerEvents {
    * (jos) postoje u igri.
    */
   "livekit:mafiaToken": (ack: (res: LiveKitTokenResult) => void) => void;
+  /** Salje selfie snimljen na pocetku partije — server ga cuva i prosledjuje svima kroz room:state. */
+  "photo:submit": (
+    payload: PhotoSubmitPayload,
+    ack: (res: RoomActionResult) => void,
+  ) => void;
 }
 
 export interface RolePayload {

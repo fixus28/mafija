@@ -4,6 +4,7 @@ import {
   MIN_PLAYERS,
   NAME_MAX_LENGTH,
   NAME_MIN_LENGTH,
+  PHOTO_MAX_BYTES,
   type ClientToServerEvents,
   type ServerToClientEvents,
 } from "@mafija/shared";
@@ -107,7 +108,7 @@ io.on("connection", (socket) => {
     if (room) broadcastState(room);
   });
 
-  socket.on("game:start", (ack) => {
+  socket.on("game:start", async (ack) => {
     const binding = getBindingForSocket(socket.id);
     const room = binding ? getRoom(binding.code) : undefined;
     if (!binding || !room) {
@@ -124,7 +125,7 @@ io.on("connection", (socket) => {
         error: `Potrebno je bar ${MIN_PLAYERS} povezanih igrača (trenutno: ${present}).`,
       });
     }
-    ack(game.startGame(room));
+    ack(await game.startGame(room));
   });
 
   socket.on("night:action", (payload, ack) => {
@@ -180,6 +181,25 @@ io.on("connection", (socket) => {
       console.error("[livekit] neuspesno pravljenje mafijaškog tokena:", err);
       ack({ ok: false, error: "Video server trenutno nije dostupan." });
     }
+  });
+
+  socket.on("photo:submit", (payload, ack) => {
+    const binding = getBindingForSocket(socket.id);
+    const room = binding ? getRoom(binding.code) : undefined;
+    const me = binding && room ? room.players.get(binding.sessionId) : undefined;
+    if (!room || !me) return ack({ ok: false, error: "Nisi ni u jednoj sobi." });
+
+    const dataUrl = payload.dataUrl ?? "";
+    if (!dataUrl.startsWith("data:image/")) {
+      return ack({ ok: false, error: "Neispravan format slike." });
+    }
+    if (dataUrl.length > PHOTO_MAX_BYTES) {
+      return ack({ ok: false, error: "Slika je prevelika." });
+    }
+
+    me.photoDataUrl = dataUrl;
+    ack({ ok: true });
+    broadcastState(room);
   });
 
   socket.on("disconnect", () => {

@@ -180,21 +180,52 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `<button>` (proverено outerHTML-om) — "nedozvoljeno" dugme se zato
     simulira ručno (`style={{pointerEvents:"none"}}` + zatamnjena
     klasa) umesto pravog HTML `disabled` atributa.
-  - **Nedovršeno (namerno, ovo je "logika" prolaz — izgled dolazi
-    posle):** `VideoRoom`/`MafiaChannel` koriste LiveKit-ov podrazumevani
-    izgled (`GridLayout`/`ParticipantTile`/`TrackToggle` sa minimalnim
-    Tailwind stilom) — korisnik će nacrtati/opisati kako treba da
-    izgleda pa se to uklapa u posebnom prolazu. `GridLayout` na uskom
-    `max-w-md` layoutu paginira po 2 učesnika — verovatno se menja u
-    tom redizajnu. Deployment LiveKit-a na VPS (treći servis u
-    `docker-compose.yml`, UDP portovi u firewall-u, `.env` sa pravim
-    ključevima) nije još urađen — sledi faza 7.
   - Lokalni razvoj BEZ Dockera: `livekit-server.exe` (standalone
     binarni fajl, van repoa) u `C:\Users\Legion\tools\livekit\`,
     pokreće se `livekit-server --dev` pored `npm run dev:server`/`dev:client`.
-- **SLEDEĆE: izgled videa** — korisnik šalje skicu/opis željenog
-  rasporeda kamera (uklopiti u noir dizajn), pa se `VideoRoom`/
-  `MafiaChannel` prepravljaju da to prate.
+- **GOTOVO — prvi prolaz izgleda videa** (po korisnikovom opisu, uživo
+  testirano 7 tabova, lažne kamere, bez grešaka u konzoli):
+  - **Custom grid umesto LiveKit-ovog `GridLayout`** — fiksno 2 reda,
+    kolone = `ceil(broj/2)`, SVI igrači na jednoj strani (bez paginacije
+    koju je pravio podrazumevani `GridLayout`). `VideoRoom.tsx` prikazuje
+    UŽIVO video tokom DAY_DISCUSSION/MINI_DISCUSSION, a van toga
+    `PhotoGrid.tsx` (selfie fotografije) na istom mestu.
+  - **Selfie na početku partije:** `client/src/selfie.ts` —
+    `getUserMedia` + canvas snimak JEDNOG frejma, NEZAVISNO od LiveKit-a
+    (kamera se odmah pusti posle snimka); okida se u `Lobby.tsx` čim
+    igrač uđe (radi i pre nego što faze uopšte dozvole kameru). Slika
+    (JPEG data URL, `PHOTO_SIZE_PX`/`PHOTO_MAX_BYTES` u
+    `shared/constants.ts`) ide na server (`photo:submit`) i vraća se
+    svima kroz `PublicPlayer.photoUrl` u `room:state`.
+  - **`PhotoGrid.tsx`** — deljena komponenta: galerija (foto ili inicijal
+    ako slika još nije stigla) u istom 2-red rasporedu. Koristi je i
+    `VideoRoom` (van diskusije) i `PlayerPicker` (biranje mete
+    noću/glasanje — sad su to klikabilne fotografije, ne dugmad sa
+    tekstom). Mrtvi igrači dobijaju crveni "✕" preko fotografije
+    (`showDead` prop) — automatski, čim `alive` postane `false`, ne
+    treba posebna "reveal" logika.
+  - **Mafijin kanal sad ima i video** (ne samo audio) — mafija i dama se
+    vide uživo dok biraju metu; server-side token za taj kanal sad
+    dozvoljava i `TrackSource.CAMERA`.
+  - **Dan/noć tema:** `body.is-night` klasa (kači je `Game.tsx` na osnovu
+    faze) menja pozadinu na hladniju/tamniju tokom NIGHT/DAWN
+    (`index.css`).
+  - **Nađen i popravljen pravi bag (trka/race condition):** `setPhase`
+    je slao `room:state` PRE nego što je `updateParticipant` poziv ka
+    LiveKit-u stvarno završio — klijent bi odmah (na osnovu iste vesti o
+    novoj fazi) pokušao da objavi kameru, LiveKit server ga odbije jer
+    dozvola tamo još nije primenjena, i klijent to tiho preskoči
+    (nema retry-ja). Ispravka: `setPhase` (i ceo lanac oko njega —
+    `advancePhase`, `startNight`, `resolveNightPhase`,
+    `resolveVotingPhase`, `endGame`, `startGame`) sad je `async` i
+    SAČEKA `syncVideoPermissions` pre `broadcastState`. Bez ovoga je
+    nasumično radio za 0 ili 1 od 7 igrača.
+  - **Otvoreno za kasnije fino podešavanje:** mrtav igrač tokom UŽIVO
+    videa (diskusija) prikazuje prazan video kvadrat umesto foto+X (X se
+    vidi samo van diskusije, gde je `PhotoGrid` na sceni) — malo
+    nedosledno, nije nužno pogrešno. Deployment LiveKit-a na VPS (treći
+    servis u `docker-compose.yml`, UDP portovi u firewall-u, `.env` sa
+    pravim ključevima) nije još urađen — sledi faza 7.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
 
 ## Konvencije rada

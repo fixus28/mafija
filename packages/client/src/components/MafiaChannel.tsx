@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { LiveKitRoom, RoomAudioRenderer, TrackToggle } from "@livekit/components-react";
+import {
+  LiveKitRoom,
+  ParticipantTile,
+  RoomAudioRenderer,
+  TrackToggle,
+  useTracks,
+} from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Track } from "livekit-client";
 import { socket } from "../socket";
 
 /**
- * Privatan nocni audio kanal mafije i dame — zasebna LiveKit soba (server
- * je jedini koji izdaje token za nju, samo njima dvoma). Montira se samo
- * dok traje NIGHT za MAFIA/ACCOMPLICE — konekcija se sama zatvara kad
- * komponenta nestane iz stabla (kraj noci).
+ * Privatan nocni kanal mafije i dame — zasebna LiveKit soba (server je
+ * jedini koji izdaje token za nju, samo njima dvoma). Kamera i mikrofon,
+ * pa vide i cuju jedno drugo dok biraju metu. Montira se samo dok traje
+ * NIGHT za MAFIA/ACCOMPLICE — konekcija se sama zatvara kad komponenta
+ * nestane iz stabla (kraj noci).
  */
 export default function MafiaChannel() {
   const [token, setToken] = useState<string | null>(null);
@@ -39,14 +46,22 @@ export default function MafiaChannel() {
       token={token}
       serverUrl={url}
       connect
+      video
       audio
-      className="rounded border border-seal/40 bg-smoke-900 px-4 py-3"
+      className="overflow-hidden rounded border border-seal/40 bg-smoke-900"
     >
-      <p className="text-center text-xs text-seal-bright">
-        Privatni kanal — samo ti i partner čujete ovo.
+      <p className="px-4 py-2 text-center text-xs text-seal-bright">
+        Privatni kanal — samo ti i partner vidite/čujete ovo.
       </p>
+      <MafiaVideoGrid />
       <RoomAudioRenderer />
-      <div className="mt-2 flex justify-center">
+      <div className="flex justify-center gap-3 py-3">
+        <TrackToggle
+          source={Track.Source.Camera}
+          className="rounded border border-smoke-700 bg-smoke-900 px-4 py-2 text-sm text-paper hover:border-brass/50"
+        >
+          Kamera
+        </TrackToggle>
         <TrackToggle
           source={Track.Source.Microphone}
           className="rounded border border-smoke-700 bg-smoke-900 px-4 py-2 text-sm text-paper hover:border-brass/50"
@@ -55,5 +70,24 @@ export default function MafiaChannel() {
         </TrackToggle>
       </div>
     </LiveKitRoom>
+  );
+}
+
+/** Samo dvoje ucesnika — jedan red je dovoljan, ali koristimo istu 2-kolonsku logiku. */
+function MafiaVideoGrid() {
+  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
+    onlySubscribed: false,
+  });
+  return (
+    <div className="grid grid-cols-2 gap-2 px-4 pb-2">
+      {tracks.map((trackRef) => (
+        <div
+          key={trackRef.participant.identity}
+          className="aspect-square overflow-hidden rounded border border-smoke-700"
+        >
+          <ParticipantTile trackRef={trackRef} />
+        </div>
+      ))}
+    </div>
   );
 }

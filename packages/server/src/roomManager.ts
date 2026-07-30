@@ -26,6 +26,8 @@ export interface Player {
   socketId: string | null;
   /** Null pre nego sto partija pocne (LOBBY). */
   role: Role | null;
+  /** Selfie snimljen na pocetku partije (data URL) — null dok igrac ne posalje. */
+  photoDataUrl: string | null;
 }
 
 /** Prazan set nocnih izbora — pocetno stanje i reset posle svake noci. */
@@ -114,6 +116,7 @@ export function toPublicState(room: Room): PublicRoomState {
       isHost: p.isHost,
       connected: p.connected,
       alive: p.alive,
+      photoUrl: p.photoDataUrl,
     })),
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
@@ -168,6 +171,7 @@ export function createRoom(
     alive: true,
     socketId: null,
     role: null,
+    photoDataUrl: null,
   };
   room.players.set(sessionId, player);
   rooms.set(room.code, room);
@@ -216,6 +220,7 @@ export function joinRoom(
     alive: true,
     socketId: null,
     role: null,
+    photoDataUrl: null,
   };
   room.players.set(sessionId, player);
   bindSocket(room, player, socketId);

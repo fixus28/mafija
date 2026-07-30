@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  GridLayout,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -12,17 +11,21 @@ import "@livekit/components-styles";
 import { Track } from "livekit-client";
 import { computeVideoPermission, type PublicRoomState } from "@mafija/shared";
 import { socket } from "../socket";
+import PhotoGrid from "./PhotoGrid";
 
 interface Props {
   room: PublicRoomState;
   myId: string;
 }
 
+const DISCUSSING_PHASES = new Set(["DAY_DISCUSSION", "MINI_DISCUSSION"]);
+
 /**
- * Video/audio soba preko LiveKit-a — konekcija ostaje otvorena kroz celu
- * partiju, samo se prava za objavljivanje kamere/mikrofona menjaju uzivo
- * po fazi (server je autoritativan, ovo je samo brzo lokalno ogledalo tog
- * pravila da se ne ceka mreza).
+ * Kamera/mikrofon soba preko LiveKit-a — konekcija ostaje otvorena kroz
+ * celu partiju, samo se prava za objavljivanje menjaju uzivo po fazi.
+ * Tokom diskusije prikazuje pravi (uzivo) video svih igraca na jednoj
+ * strani (fiksno 2 reda, bez listanja); van diskusije prikazuje njihove
+ * pocetne selfie fotografije na istom mestu (mrtvi precrtani crvenim X).
  */
 export default function VideoRoom({ room, myId }: Props) {
   const [token, setToken] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export default function VideoRoom({ room, myId }: Props) {
     alive: me?.alive ?? false,
     silenced: room.silencedPlayerId === myId,
   });
+  const discussing = DISCUSSING_PHASES.has(room.phase);
 
   if (error) {
     return <p className="text-center text-sm text-seal-bright">{error}</p>;
@@ -65,35 +69,43 @@ export default function VideoRoom({ room, myId }: Props) {
       className="overflow-hidden rounded border border-smoke-800"
     >
       <VideoPermissionSync camera={permission.camera} microphone={permission.microphone} />
-      <VideoGrid />
       <RoomAudioRenderer />
-      <div className="flex justify-center gap-3 bg-smoke-900 py-3">
-        {/* TrackToggle ne prosledjuje HTML "disabled" na dugme (proveril: outerHTML ga nema),
-            pa "nedozvoljeno" stanje simuliramo sami preko stila — server ionako brani
-            objavu ako dozvola nije data, ovo je samo vizuelni signal. */}
-        <TrackToggle
-          source={Track.Source.Camera}
-          style={permission.camera ? undefined : { pointerEvents: "none" }}
-          className={`rounded border px-4 py-2 text-sm transition-colors ${
-            permission.camera
-              ? "border-smoke-700 bg-smoke-900 text-paper hover:border-brass/50"
-              : "cursor-not-allowed border-smoke-800 bg-smoke-900 text-paper-dim opacity-40"
-          }`}
-        >
-          Kamera
-        </TrackToggle>
-        <TrackToggle
-          source={Track.Source.Microphone}
-          style={permission.microphone ? undefined : { pointerEvents: "none" }}
-          className={`rounded border px-4 py-2 text-sm transition-colors ${
-            permission.microphone
-              ? "border-smoke-700 bg-smoke-900 text-paper hover:border-brass/50"
-              : "cursor-not-allowed border-smoke-800 bg-smoke-900 text-paper-dim opacity-40"
-          }`}
-        >
-          Mikrofon
-        </TrackToggle>
+      <div className="p-2">
+        {discussing ? (
+          <LiveVideoGrid />
+        ) : (
+          <PhotoGrid players={room.players} myId={myId} showDead />
+        )}
       </div>
+      {discussing && (
+        <div className="flex justify-center gap-3 bg-smoke-900 py-3">
+          {/* TrackToggle ne prosledjuje HTML "disabled" na dugme (proveril: outerHTML ga nema),
+              pa "nedozvoljeno" stanje simuliramo sami preko stila — server ionako brani
+              objavu ako dozvola nije data, ovo je samo vizuelni signal. */}
+          <TrackToggle
+            source={Track.Source.Camera}
+            style={permission.camera ? undefined : { pointerEvents: "none" }}
+            className={`rounded border px-4 py-2 text-sm transition-colors ${
+              permission.camera
+                ? "border-smoke-700 bg-smoke-900 text-paper hover:border-brass/50"
+                : "cursor-not-allowed border-smoke-800 bg-smoke-900 text-paper-dim opacity-40"
+            }`}
+          >
+            Kamera
+          </TrackToggle>
+          <TrackToggle
+            source={Track.Source.Microphone}
+            style={permission.microphone ? undefined : { pointerEvents: "none" }}
+            className={`rounded border px-4 py-2 text-sm transition-colors ${
+              permission.microphone
+                ? "border-smoke-700 bg-smoke-900 text-paper hover:border-brass/50"
+                : "cursor-not-allowed border-smoke-800 bg-smoke-900 text-paper-dim opacity-40"
+            }`}
+          >
+            Mikrofon
+          </TrackToggle>
+        </div>
+      )}
     </LiveKitRoom>
   );
 }
@@ -119,13 +131,29 @@ function VideoPermissionSync({ camera, microphone }: { camera: boolean; micropho
   return null;
 }
 
-function VideoGrid() {
-  const tracks = useTracks([Track.Source.Camera, Track.Source.Microphone], {
+/** Uzivo video svih ucesnika — fiksno 2 reda, kolone zavise od broja ljudi. */
+function LiveVideoGrid() {
+  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
     onlySubscribed: false,
   });
+  const columns = Math.max(1, Math.ceil(tracks.length / 2));
   return (
-    <GridLayout tracks={tracks} style={{ height: "320px" }}>
-      <ParticipantTile />
-    </GridLayout>
+    <div
+      className="grid gap-2"
+      style={{
+        gridTemplateRows: "repeat(2, 1fr)",
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gridAutoFlow: "column",
+      }}
+    >
+      {tracks.map((trackRef) => (
+        <div
+          key={trackRef.participant.identity}
+          className="aspect-square overflow-hidden rounded border border-smoke-700"
+        >
+          <ParticipantTile trackRef={trackRef} />
+        </div>
+      ))}
+    </div>
   );
 }

@@ -32,3 +32,7 @@ export const VOTING_SECONDS = 30;
 export const RESOLUTION_DISPLAY_SECONDS = 6;
 /** Mini-diskusija pred reglasanje kad je nereseno — 4x kraca od redovne. */
 export const MINI_DISCUSSION_SECONDS = DAY_DISCUSSION_SECONDS / 4;
+
+/** Strana selfie-a (kvadrat) i gornja granica velicine data URL-a koji server prihvata. */
+export const PHOTO_SIZE_PX = 240;
+export const PHOTO_MAX_BYTES = 300_000;

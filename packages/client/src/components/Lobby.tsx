@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PublicRoomState } from "@mafija/shared";
 import { socket } from "../socket";
+import { captureSelfie } from "../selfie";
 
 interface Props {
   room: PublicRoomState;
@@ -15,6 +16,19 @@ export default function Lobby({ room, myId, onLeave }: Props) {
   const me = room.players.find((p) => p.id === myId);
   const connectedCount = room.players.filter((p) => p.connected).length;
   const canStart = connectedCount >= room.minPlayers;
+
+  // Selfie se slika jednom po igracu — cim ima fotografiju (i posle refresh-a), preskace se.
+  useEffect(() => {
+    if (me?.photoUrl) return;
+    let cancelled = false;
+    captureSelfie().then((dataUrl) => {
+      if (cancelled || !dataUrl) return;
+      socket.emit("photo:submit", { dataUrl }, () => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [me?.photoUrl]);
 
   const copyCode = async () => {
     try {
@@ -78,6 +92,17 @@ export default function Lobby({ room, myId, onLeave }: Props) {
                 aria-hidden
                 className={`h-2 w-2 rounded-full ${p.connected ? "bg-brass" : "bg-smoke-700"}`}
               />
+              {p.photoUrl ? (
+                <img
+                  src={p.photoUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-full border border-smoke-700 object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-smoke-700 bg-smoke-800 text-xs text-paper-dim">
+                  {p.name.charAt(0).toUpperCase()}
+                </span>
+              )}
               <span className={p.connected ? "text-paper" : "text-paper-dim line-through"}>
                 {p.name}
                 {p.id === myId && <span className="text-paper-dim"> (ti)</span>}

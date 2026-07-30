@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   DetectiveResultPayload,
   GamePhase,
@@ -22,6 +22,8 @@ interface Props {
   onLeave: () => void;
 }
 
+const NIGHT_LIKE_PHASES = new Set<GamePhase>(["NIGHT", "DAWN"]);
+
 const PHASE_LABEL: Record<GamePhase, string> = {
   LOBBY: "Predvorje",
   ROLE_REVEAL: "Podela uloga",
@@ -42,6 +44,15 @@ function formatSeconds(total: number): string {
 
 export default function Game({ room, myId, role, detectiveResults, narratorLog, onLeave }: Props) {
   const seconds = useCountdown(room.phaseEndsAt);
+
+  // Grad spava — tamnija pozadina dok traje noc/zora (vraceno kad Game ode iz stabla).
+  useEffect(() => {
+    document.body.classList.toggle("is-night", NIGHT_LIKE_PHASES.has(room.phase));
+    return () => {
+      document.body.classList.remove("is-night");
+    };
+  }, [room.phase]);
+
   const me = room.players.find((p) => p.id === myId);
   const alivePlayers = room.players.filter((p) => p.alive);
   // Saznanja su rezultati privatnih provera po meti — drzimo samo najnoviji

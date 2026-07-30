@@ -81,57 +81,62 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     }
   }
 
-  function setPhase(room: Room, phase: GamePhase, durationMs: number | null) {
+  /**
+   * Menja fazu. Video prava se SINHRONO cekaju PRE nego sto klijenti saznaju
+   * za novu fazu — inace klijent (na osnovu iste te vesti) odmah pokusa da
+   * objavi kameru, a LiveKit server ga odbije jer updateParticipant poziv
+   * ka njemu jos nije stigao (trka izmedju REST poziva i Socket.IO objave).
+   */
+  async function setPhase(room: Room, phase: GamePhase, durationMs: number | null) {
     clearPhaseTimer(room);
     room.phase = phase;
     room.phaseEndsAt = durationMs === null ? null : Date.now() + durationMs;
+    await syncVideoPermissions(room);
     broadcastState(room);
-    // Ne cekamo LiveKit (mrezni poziv) da bismo nastavili partiju — greske su vec uhvacene unutra.
-    void syncVideoPermissions(room);
     if (durationMs !== null) {
-      room.phaseTimer = setTimeout(() => advancePhase(room), durationMs);
+      room.phaseTimer = setTimeout(() => void advancePhase(room), durationMs);
     }
   }
 
-  function advancePhase(room: Room) {
+  async function advancePhase(room: Room) {
     room.phaseTimer = null;
     switch (room.phase) {
       case "ROLE_REVEAL":
-        startNight(room);
+        await startNight(room);
         break;
       case "NIGHT":
-        resolveNightPhase(room);
+        await resolveNightPhase(room);
         break;
       case "DAWN":
-        setPhase(room, "DAY_DISCUSSION", DAY_DISCUSSION_SECONDS * 1000);
+        await setPhase(room, "DAY_DISCUSSION", DAY_DISCUSSION_SECONDS * 1000);
         break;
       case "DAY_DISCUSSION":
-        setPhase(room, "VOTING", VOTING_SECONDS * 1000);
+        await setPhase(room, "VOTING", VOTING_SECONDS * 1000);
         break;
       case "VOTING":
-        resolveVotingPhase(room);
+        await resolveVotingPhase(room);
         break;
       case "MINI_DISCUSSION":
         // Reglasavanje: samo izmedju izjednacenih, oni sami ne glasaju.
-        setPhase(room, "VOTING", VOTING_SECONDS * 1000);
+        await setPhase(room, "VOTING", VOTING_SECONDS * 1000);
         break;
       case "RESOLUTION":
-        startNight(room);
+        await startNight(room);
         break;
       default:
         break;
     }
   }
 
-  function startNight(room: Room) {
+  async function startNight(room: Room) {
     room.nightActions = emptyNightActions();
     // Utisanost i eventualni ostaci reglasavanja vaze samo za dan koji se upravo zavrsio.
     room.silencedSessionId = null;
     room.voteRunoff = null;
-    setPhase(room, "NIGHT", NIGHT_ACTION_SECONDS * 1000);
+    await setPhase(room, "NIGHT", NIGHT_ACTION_SECONDS * 1000);
   }
 
-  function resolveNightPhase(room: Room) {
+  async function resolveNightPhase(room: Room) {
     const roles = currentRoles(room);
     const result = resolveNight(roles, room.nightActions);
 
@@ -168,13 +173,13 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
 
     const win = checkWinCondition(roles, aliveSessionIds(room));
     if (win) {
-      endGame(room, win);
+      await endGame(room, win);
       return;
     }
-    setPhase(room, "DAWN", DAWN_DISPLAY_SECONDS * 1000);
+    await setPhase(room, "DAWN", DAWN_DISPLAY_SECONDS * 1000);
   }
 
-  function resolveVotingPhase(room: Room) {
+  async function resolveVotingPhase(room: Room) {
     const roles = currentRoles(room);
     const alive = aliveSessionIds(room);
     const eligibleVoters = room.voteRunoff
@@ -194,7 +199,7 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
         `Nerešeno između: ${names}. Sledi kratka diskusija pa novo glasanje — samo medju njima.`,
         "vote_tie",
       );
-      setPhase(room, "MINI_DISCUSSION", MINI_DISCUSSION_SECONDS * 1000);
+      await setPhase(room, "MINI_DISCUSSION", MINI_DISCUSSION_SECONDS * 1000);
       return;
     }
 
@@ -226,19 +231,19 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
 
     const win = checkWinCondition(outcome.roles, aliveSessionIds(room));
     if (win) {
-      endGame(room, win);
+      await endGame(room, win);
       return;
     }
-    setPhase(room, "RESOLUTION", RESOLUTION_DISPLAY_SECONDS * 1000);
+    await setPhase(room, "RESOLUTION", RESOLUTION_DISPLAY_SECONDS * 1000);
   }
 
-  function endGame(room: Room, winner: WinResult) {
+  async function endGame(room: Room, winner: WinResult) {
     narrate(
       room,
       winner === "TOWN" ? "Grad je pobedio! Mafija je poražena." : "Mafija je pobedila! Grad je pao.",
       winner === "TOWN" ? "town_wins" : "mafia_wins",
     );
-    setPhase(room, "GAME_OVER", null);
+    await setPhase(room, "GAME_OVER", null);
   }
 
   function buildRolePayload(
@@ -258,7 +263,7 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     return { role };
   }
 
-  function startGame(room: Room): RoomActionResult {
+  async function startGame(room: Room): Promise<RoomActionResult> {
     if (room.phase !== "LOBBY") {
       return { ok: false, error: "Partija je već počela." };
     }
@@ -283,7 +288,7 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
     room.votes = new Map();
     room.silencedSessionId = null;
     room.voteRunoff = null;
-    setPhase(room, "ROLE_REVEAL", ROLE_REVEAL_SECONDS * 1000);
+    await setPhase(room, "ROLE_REVEAL", ROLE_REVEAL_SECONDS * 1000);
     return { ok: true };
   }
 

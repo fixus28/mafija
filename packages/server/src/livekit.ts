@@ -83,6 +83,7 @@ export function mafiaChannelRoomName(roomCode: string): string {
  * Token za privatni nocni kanal — zasebna LiveKit soba, pa civil nikad ne
  * moze da se poveze na nju (nema potpisan token za taj naziv sobe), bez
  * obzira sta klijent radi. To je stvarna granica privatnosti kanala.
+ * Mafija i dama vide I cuju jedno drugo (kamera + mikrofon).
  */
 export async function createMafiaChannelToken(
   roomCode: string,
@@ -99,7 +100,7 @@ export async function createMafiaChannelToken(
     room: mafiaChannelRoomName(roomCode),
     canSubscribe: true,
     canPublish: true,
-    canPublishSources: [TrackSource.MICROPHONE],
+    canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE],
     canPublishData: false,
   });
   return token.toJwt();

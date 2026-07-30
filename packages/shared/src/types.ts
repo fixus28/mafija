@@ -33,6 +33,8 @@ export interface PublicPlayer {
   isHost: boolean;
   connected: boolean;
   alive: boolean;
+  /** Selfie snimljen na pocetku partije (data URL) — null dok se ne posalje. */
+  photoUrl: string | null;
 }
 
 /** Javno stanje sobe koje server emituje svima u sobi. */

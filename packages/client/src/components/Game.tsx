@@ -372,13 +372,11 @@ function DiscussionPanel({ room, myId }: { room: PublicRoomState; myId: string }
   const silencedName = room.players.find((p) => p.id === silenced)?.name;
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-center text-sm text-paper-dim">
-        {amSilenced
-          ? "Ćutiš danas — ne učestvuješ u diskusiji."
-          : silenced
-            ? `${silencedName ?? "Neko"} je ućutkan/a danas.`
-            : "Diskutujte naglas (kamere i mikrofoni stižu u kasnijoj fazi)."}
-      </p>
+      {(amSilenced || silenced) && (
+        <p className="text-center text-sm text-paper-dim">
+          {amSilenced ? "Ćutiš danas — ne učestvuješ u diskusiji." : `${silencedName ?? "Neko"} je ućutkan/a danas.`}
+        </p>
+      )}
       {room.phase === "MINI_DISCUSSION" && room.runoff && (
         <p className="text-center text-xs text-brass">
           Reglasavanje samo između:{" "}

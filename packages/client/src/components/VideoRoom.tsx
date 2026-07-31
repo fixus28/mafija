@@ -151,17 +151,21 @@ function VideoPermissionSync({ camera, microphone }: { camera: boolean; micropho
   return null;
 }
 
-/** Uzivo video svih ucesnika — fiksno 2 reda, kolone zavise od broja ljudi. */
+/**
+ * Uzivo video svih ucesnika — najvise 2 reda, kolone zavise od broja ljudi.
+ * Za 1-2 ucesnika je jedan red (jedan pored drugog), ne jedan ispod drugog.
+ */
 function LiveVideoGrid() {
   const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
     onlySubscribed: false,
   });
-  const columns = Math.max(1, Math.ceil(tracks.length / 2));
+  const rows = tracks.length <= 2 ? 1 : 2;
+  const columns = Math.max(1, Math.ceil(tracks.length / rows));
   return (
     <div
       className="grid gap-2"
       style={{
-        gridTemplateRows: "repeat(2, 1fr)",
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         gridAutoFlow: "column",
       }}

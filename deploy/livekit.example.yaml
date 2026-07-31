@@ -1,0 +1,15 @@
+# Kopiraj u deploy/livekit.yaml (gitignore-ovan, sadrzi tajni kljuc) i
+# zameni "menjaj-me-api-key"/"menjaj-me-api-secret" — MORAJU biti isti
+# parovi kao LIVEKIT_API_KEY/LIVEKIT_API_SECRET u deploy/.env, jer server
+# potpisuje tokene tim kljucem, a LiveKit ih ovde proverava.
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  # Server nema sopstveni javni IP unutar Docker mreze — bez ovoga bi
+  # ucesnicima slao interne Docker adrese kao ICE kandidate i video ne bi
+  # radio. "true" znaci da sam otkriva javni IP VPS-a preko STUN-a.
+  use_external_ip: true
+keys:
+  menjaj-me-api-key: menjaj-me-api-secret

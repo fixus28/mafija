@@ -13,3 +13,10 @@
 		file_server
 	}
 }
+
+# LiveKit signal (WS/HTTP) — zaseban poddomen, isti VPS. Caddy ovde samo
+# terminira TLS i prosledjuje; stvaran medija (audio/video) saobracaj ide
+# DIREKTNO na LiveKit-ove TCP/UDP portove, mimo Caddy-ja (vidi docker-compose.yml).
+{$LIVEKIT_DOMAIN} {
+	reverse_proxy livekit:7880
+}

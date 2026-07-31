@@ -313,7 +313,36 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     ponasanje glasanja), prikazuje se u `Game.tsx` odmah ispod narator
     poruke. Prepisuje se (ne gomila) svakim novim glasanjem, ukljucujuci
     reglasavanja — namerno pamti samo poslednje, ne celu istoriju partije.
-- Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
+- **Faza 7 (LiveKit na VPS) — konfiguracija gotova, deploy na pravi VPS
+  još NIJE izveden/testiran uživo** (za razliku od svega ranije u ovom
+  fajlu, ovo nije potvrđeno na stvarnom serveru — sledeći korak kad budeš
+  spreman):
+  - `deploy/docker-compose.yml` — nov `livekit` servis
+    (`livekit/livekit-server:latest`, zvaničan image, bez sopstvenog
+    Dockerfile-a). Signal (port 7880) NIJE javno izložen — ide samo kroz
+    Caddy iznutra (Docker interno ime `livekit`); javno su izloženi samo
+    `7881/tcp` i `50000-50100/udp` (stvaran audio/video RTC saobraćaj, ne
+    može kroz reverse proxy). `server` servis sad ima `environment:` sa
+    `LIVEKIT_URL`/`LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET` (ranije ih
+    UOPŠTE nije imao — latentna rupa od faze 4, sad zatvorena).
+  - `deploy/livekit.example.yaml` → kopira se u `deploy/livekit.yaml`
+    (gitignore-ovan, sadrži tajni ključ, isti par kao u `.env`).
+    `use_external_ip: true` — server unutar Docker mreže nema svoj javni
+    IP, pa preko STUN-a sam otkriva IP VPS-a za ICE kandidate (bez ovoga
+    bi klijentima slao interne Docker adrese i video ne bi radio).
+  - `deploy/Caddyfile` — drugi site block za poseban poddomen
+    (`{$LIVEKIT_DOMAIN}`, treba DRUGO DuckDNS ime na istu IP), samo
+    `reverse_proxy livekit:7880` — Caddy tu radi isključivo TLS
+    terminaciju za signal kanal.
+  - `deploy/DEPLOY.md` — dodato poglavlje 7 sa svim koracima (drugi
+    DuckDNS poddomen, `openssl rand -hex 16` za ključ/tajnu, firewall
+    pravila za 7881/tcp i UDP range, provera preko
+    `docker compose logs livekit` — NE SME pisati "no keys provided,
+    using placeholder keys", to znači da se `.env` i `livekit.yaml` ne
+    poklapaju).
+  - Kad se ovo pokrene na VPS-u: testirati uživo sa dva uređaja na
+    različitim mrežama (isti obrazac kao faze 5+6 lokalno), pa tek onda
+    prebaciti ovaj bullet u "GOTOVO" sa detaljima šta je stvarno viđeno.
 
 ## Konvencije rada
 

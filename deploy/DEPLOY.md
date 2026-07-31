@@ -100,8 +100,64 @@ docker compose down
 - Posle svega: test sa prijateljima na različitim mrežama — to je ujedno
   materijal za poglavlje o testiranju.
 
-## Napomena za fazu 4 (LiveKit)
+## 7. LiveKit (video) na VPS-u
 
-LiveKit se dodaje kao treći servis u ovaj isti `docker-compose.yml`, uz
-otvaranje njegovih UDP portova u firewall-u i još jedan poddomen ili putanju
-u Caddyfile-u. Postavka koju sada praviš je temelj — ništa se ne baca.
+LiveKit je treći servis u istom `docker-compose.yml`. Signal (WebSocket/HTTP)
+ide kroz Caddy kao i sve ostalo — ali stvaran audio/video saobraćaj je
+UDP i mora direktno na server, mimo Caddy-ja, pa treba par dodatnih koraka.
+
+### 7.1 Drugi DuckDNS poddomen
+
+LiveKit treba svoj hostname (zaseban TLS sertifikat, zaseban Caddy site
+block). Na [duckdns.org](https://www.duckdns.org) dodaj JOŠ JEDNO ime u
+istom nalogu (npr. `mafija-etf-livekit`) i upiši mu ISTU IP adresu VPS-a
+kao glavnom domenu — DuckDNS dozvoljava više imena po nalogu, besplatno.
+
+### 7.2 Kredencijali
+
+```bash
+openssl rand -hex 16   # pokreni DVA PUTA — jednom za kljuc, jednom za tajnu
+```
+
+Zapiši ta dva niza — trebaju ti u DVA fajla (moraju biti IDENTIČNI u oba):
+
+```bash
+cd deploy
+cp .env.example .env
+nano .env                        # DOMAIN, LIVEKIT_DOMAIN, LIVEKIT_API_KEY, LIVEKIT_API_SECRET
+
+cp livekit.example.yaml livekit.yaml
+nano livekit.yaml                # "keys:" — isti key/secret kao gore
+```
+
+### 7.3 Firewall
+
+Hetzner Console → Firewalls → tvoj firewall → dodaj inbound pravila:
+
+- **TCP 7881** (ICE/TURN fallback)
+- **UDP 50000–50100** (stvaran audio/video saobraćaj — RTC medija)
+
+(22/80/443 su već otvoreni iz koraka 2.)
+
+### 7.4 Pokretanje
+
+```bash
+cd ~/mafija && git pull
+cd deploy && docker compose up -d --build
+docker compose logs livekit       # PROVERA: ne sme pisati "no keys provided,
+                                   # using placeholder keys" — ako pise, .env
+                                   # i livekit.yaml se ne poklapaju
+```
+
+Otvori `https://<LIVEKIT_DOMAIN>` u browseru — LiveKit odgovara sa kratkim
+JSON-om ("OK" ili slično) kad je zdrav; ako dobiješ grešku sertifikata,
+DNS za taj poddomen još nije stigao/propagirao.
+
+### 7.5 Provera uživo
+
+Ista provera kao i za faze 5+6 lokalno: dva uređaja na različitim mrežama
+(npr. laptop + telefon na mobilnim podacima), partija do dnevne diskusije —
+kamere/mikrofoni treba da se vide/čuju uživo. Ako se soba/lobi radi ali
+video ne uspostavlja konekciju, prvo proveri da UDP portovi u firewall-u
+ZAISTA prolaze (ne samo da su "dodati" — Hetzner firewall treba i da bude
+zakačen na sam server, ne samo kreiran).

@@ -5,6 +5,12 @@ services:
       dockerfile: deploy/Dockerfile.server
     restart: unless-stopped
     # Namerno bez "ports": serveru pristupa samo Caddy, iznutra
+    environment:
+      - LIVEKIT_URL=wss://${LIVEKIT_DOMAIN}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    depends_on:
+      - livekit
 
   web:
     build:
@@ -13,14 +19,29 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+      - livekit
     ports:
       - "80:80"
       - "443:443"
     environment:
       - DOMAIN=${DOMAIN}
+      - LIVEKIT_DOMAIN=${LIVEKIT_DOMAIN}
     volumes:
       - caddy_data:/data      # ovde Caddy cuva sertifikate
       - caddy_config:/config
+
+  # Video SFU. Signal (WS/HTTP, port 7880) ide SAMO kroz Caddy iznutra
+  # (nema "ports" za njega) — javno su izlozeni samo TCP/UDP portovi za
+  # stvaran medija saobracaj (ICE), koji ne mogu da idu kroz reverse proxy.
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7881:7881/tcp"
+      - "50000-50100:50000-50100/udp"
 
 volumes:
   caddy_data:

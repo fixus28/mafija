@@ -313,10 +313,8 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     ponasanje glasanja), prikazuje se u `Game.tsx` odmah ispod narator
     poruke. Prepisuje se (ne gomila) svakim novim glasanjem, ukljucujuci
     reglasavanja — namerno pamti samo poslednje, ne celu istoriju partije.
-- **Faza 7 (LiveKit na VPS) — konfiguracija gotova, deploy na pravi VPS
-  još NIJE izveden/testiran uživo** (za razliku od svega ranije u ovom
-  fajlu, ovo nije potvrđeno na stvarnom serveru — sledeći korak kad budeš
-  spreman):
+- **GOTOVO (faza 7, LiveKit na VPS) — live na pravom serveru, potvrđeno
+  uživo** (selfie fotografije stižu, video/lobi rade preko interneta):
   - `deploy/docker-compose.yml` — nov `livekit` servis
     (`livekit/livekit-server:latest`, zvaničan image, bez sopstvenog
     Dockerfile-a). Signal (port 7880) NIJE javno izložen — ide samo kroz
@@ -340,9 +338,29 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `docker compose logs livekit` — NE SME pisati "no keys provided,
     using placeholder keys", to znači da se `.env` i `livekit.yaml` ne
     poklapaju).
-  - Kad se ovo pokrene na VPS-u: testirati uživo sa dva uređaja na
-    različitim mrežama (isti obrazac kao faze 5+6 lokalno), pa tek onda
-    prebaciti ovaj bullet u "GOTOVO" sa detaljima šta je stvarno viđeno.
+- **GOTOVO — prva ispravka posle prvog uživo testiranja na pravom VPS-u:**
+  - **Pravi bag (potvrđen na desktopu, telefon je bio ok):** tajmer je na
+    desktopu izgledao kraći i zaglavljivao se na 0 dok stvarna promena
+    faze ne stigne. Uzrok: `phaseEndsAt` je apsolutan trenutak po
+    SERVEROVOM satu, a `useCountdown` je računao nasuprot golom
+    `Date.now()` na klijentu — na mašini sa pogrešno podešenim satom to
+    izgleda potpuno slomljeno. Ispravka: `clockSync.ts` (nov fajl) meri
+    razliku klijent/server sat jednim round-trip-om preko novog
+    `"time:sync"` eventa (server samo vrati `Date.now()`), pri svakoj
+    (re)konekciji (`App.tsx`); `useCountdown` sad koristi
+    `getServerNow()` umesto golog `Date.now()`. Potvrđeno Playwright
+    testom sa simuliranim satom 5 minuta unapred — tajmer se poklapa
+    do sekunde sa igračem normalnog sata.
+  - **Neregen bag (dijagnostika u toku, nije još rešen):** na desktopu se
+    selfie na ulasku u lobi ne slika (nema ni prompta za kameru), a
+    LiveKit kasnije (tokom diskusije) redovno traži i dobija pristup —
+    znači da `captureSelfie()` u `selfie.ts` nešto tiho baca na tom
+    hardveru/browseru. Greška se ranije potpuno gutala (`catch { return
+    null }`) — sad se loguje u konzolu (`console.error("[selfie]...")`)
+    da sledeći put vidimo TAČAN uzrok (`NotAllowedError`,
+    `OverconstrainedError` na `facingMode: "user"` za spoljne/desktop
+    kamere koje ga ne prijavljuju, kamera zauzeta drugom aplikacijom...).
+    Sledeći put kad se pojavi — otvoriti konzolu (F12) na desktopu.
 
 ## Konvencije rada
 

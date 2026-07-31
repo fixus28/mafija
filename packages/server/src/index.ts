@@ -202,6 +202,10 @@ io.on("connection", (socket) => {
     broadcastState(room);
   });
 
+  socket.on("time:sync", (ack) => {
+    ack({ serverNow: Date.now() });
+  });
+
   socket.on("disconnect", () => {
     const room = handleDisconnect(socket.id);
     if (room) broadcastState(room);

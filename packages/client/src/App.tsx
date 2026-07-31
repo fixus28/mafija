@@ -7,6 +7,7 @@ import type {
 } from "@mafija/shared";
 import { getSessionId, socket } from "./socket";
 import { enqueueNarratorAudio } from "./narratorAudio";
+import { syncClock } from "./clockSync";
 import Home from "./components/Home";
 import Lobby from "./components/Lobby";
 import Game from "./components/Game";
@@ -46,6 +47,7 @@ export default function App() {
      * prepoznaje kao istog igraca.
      */
     const onConnect = () => {
+      syncClock();
       const code = sessionStorage.getItem("mafija:roomCode");
       const name = localStorage.getItem("mafija:playerName");
       if (!code || !name) return;

@@ -39,7 +39,11 @@ export async function captureSelfie(): Promise<string | null> {
     ctx.drawImage(video, sx, sy, side, side, 0, 0, size, size);
 
     return canvas.toDataURL("image/jpeg", 0.8);
-  } catch {
+  } catch (err) {
+    // Nemamo drugi nacin da korisnik/mi saznamo ZASTO selfie nije uspeo
+    // (dozvola odbijena, kamera zauzeta, OverconstrainedError...) —
+    // greska se ranije potpuno gutala, sto je otezavalo dijagnostiku.
+    console.error("[selfie] snimanje nije uspelo:", err);
     return null;
   } finally {
     stream?.getTracks().forEach((t) => t.stop());

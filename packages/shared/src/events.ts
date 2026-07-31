@@ -89,6 +89,13 @@ export interface ClientToServerEvents {
     payload: PhotoSubmitPayload,
     ack: (res: RoomActionResult) => void,
   ) => void;
+  /**
+   * Merenje razlike izmedju klijentovog i serverovog sata — `phaseEndsAt`
+   * je apsolutan trenutak po SERVEROVOM satu, pa ako je klijentov sat
+   * pogresno podesen (cest slucaj na desktopu), tajmer bi izgledao
+   * kraci/duzi ili se zaglavio na 0. Klijent ovo pozove jednom po konekciji.
+   */
+  "time:sync": (ack: (res: { serverNow: number }) => void) => void;
 }
 
 export interface RolePayload {

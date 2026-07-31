@@ -62,6 +62,18 @@ body.is-night {
   object-fit: cover !important;
 }
 
+/*
+ * ParticipantTile-ov koren (.lk-participant-tile) je flex kolona bez
+ * eksplicitne visine — bez ovoga ne rasteze se do pune visine naseg
+ * kvadratnog omotaca, pa i video unutra (height:100% NJEGA) kolabira na
+ * prirodnu visinu snimka, ostavljajuci crnu prugu ispod. Rastezemo ga
+ * eksplicitno da ispuni ceo kvadrat.
+ */
+.lk-participant-tile {
+  width: 100%;
+  height: 100%;
+}
+
 /* Prelaz dan/noc — dva "kapka" koji se sklope pa razdvoje preko promene teme. */
 .eyelid {
   position: fixed;

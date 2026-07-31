@@ -80,7 +80,11 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     reglasavanju, bira se samo između njih (ili "preskoči"); pre toga
     kratka mini-diskusija (`MINI_DISCUSSION`, 4x kraća od redovne). Ovo
     se ponavlja dok se ne resi (`packages/server/src/game/voting.ts`,
-    `resolveVote`).
+    `resolveVote`). **Izuzetak:** ako su izjednačeni BAŠ SVI trenutno
+    živi (nema nikog spolja da presudi), izuzimanje se ne primenjuje —
+    puštaju se i oni da glasaju u reglasavanju, inače bi partija
+    zaglavila (`packages/server/src/phaseMachine.ts`,
+    `resolveVotingPhase`, `wouldStrandEveryone`).
 - Posle glasanja (`packages/server/src/game/voting.ts`):
   - ako je izbačena `MAFIA`: dama (ako postoji) postaje nova `MAFIA`,
     gubi moć utišavanja.
@@ -281,6 +285,34 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `position: fixed`, CSS `@keyframes eyelid-sweep` u `index.css`) se
     sklope pa razdvoje preko ~1.1s tačno na istu promenu stanja kao
     ambijentalni zvuk — poštuje `prefers-reduced-motion`.
+- **GOTOVO — cetvrta runda ispravki (video CSS bag + pravi bag u glasanju + nova funkcija):**
+  - **Pravi CSS bag:** `.lk-participant-tile` (LiveKit-ov koren pojedinacne
+    plocice) je flex kolona bez eksplicitne visine — nije se rastezala do
+    pune visine naseg kvadratnog omotaca, pa je video unutra (`height:100%`
+    NJEGA) kolabirao na prirodnu visinu snimka i ostavljao crnu prugu
+    ispod slike. Nadjacano u `index.css` na `width/height:100%`.
+    (Napomena: dijagnoza je usput otkrila da je lokalni `livekit-server.exe
+    --dev` proces bio ziv 15+ sati kroz gomilu automatizovanih testova bez
+    restarta — ako se video/kasnjenje faza opet pokvari bez razloga u
+    kodu, prvo probaj restart tog procesa pre trazenja bug-a.)
+  - `PhotoGrid`/`LiveVideoGrid`: za 1-3 igraca sad je JEDAN red (jedan
+    pored drugog) umesto fiksna 2 reda koja su ih slagala jedno ispod
+    drugog (posebno ruzno/veliko za tacno 2-3 kandidata u pickeru).
+  - Uklonjena zastarela poruka "kamere i mikrofoni stižu u kasnijoj fazi"
+    iz `DiscussionPanel`-a (video odavno radi uzivo).
+  - **Pravi bag (deadlock u glasanju):** kad su BAS SVI trenutno zivi
+    igraci medjusobno izjednaceni (npr. tacno 3 zive osobe, svako dobije
+    po 1 glas), stari kod je iskljucivao SVE njih iz reglasavanja
+    (`excludedVoters = candidates`) — a kako van njih nema nikog drugog
+    zivog, reglasavanje je teklo bez ijednog moguceg glasaca i partija je
+    efektivno zaglavljivala. Ispravka: `resolveVotingPhase` u
+    `phaseMachine.ts` proverava `wouldStrandEveryone` i u tom slucaju NE
+    iskljucuje nikog — izjednaceni glasaju jedni za druge u reglasavanju.
+  - **Nova funkcija:** `PublicRoomState.lastVoteBreakdown` — ko je za koga
+    glasao u POSLEDNJEM zavrsenom glasanju (javno, ne otkriva uloge, samo
+    ponasanje glasanja), prikazuje se u `Game.tsx` odmah ispod narator
+    poruke. Prepisuje se (ne gomila) svakim novim glasanjem, ukljucujuci
+    reglasavanja — namerno pamti samo poslednje, ne celu istoriju partije.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
 
 ## Konvencije rada

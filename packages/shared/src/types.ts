@@ -58,4 +58,11 @@ export interface PublicRoomState {
    * (ili "preskoci"). Null van reglasavanja.
    */
   runoff: { candidateIds: string[]; excludedPlayerIds: string[] } | null;
+  /**
+   * Ko je za koga glasao u POSLEDNJEM zavrsenom glasanju (javno — ne
+   * otkriva uloge, samo ponasanje). Null pre prvog glasanja; posle toga se
+   * PREPISUJE (ne gomila istoriju) svakim novim glasanjem, ukljucujuci
+   * reglasavanja. targetId je null za glas "preskoci".
+   */
+  lastVoteBreakdown: { voterId: string; targetId: string | null }[] | null;
 }

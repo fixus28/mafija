@@ -62,6 +62,8 @@ export interface Room {
    * (candidates). Null van reglasavanja.
    */
   voteRunoff: { candidates: string[]; excludedVoters: string[] } | null;
+  /** Vec u obliku javnih id-jeva (upisuje ga phaseMachine.ts) — vidi PublicRoomState.lastVoteBreakdown. */
+  lastVoteBreakdown: { voterId: string; targetId: string | null }[] | null;
 }
 
 export type JoinResult =
@@ -123,6 +125,7 @@ export function toPublicState(room: Room): PublicRoomState {
     phaseEndsAt: room.phaseEndsAt,
     silencedPlayerId: silenced,
     runoff,
+    lastVoteBreakdown: room.lastVoteBreakdown,
   };
 }
 
@@ -161,6 +164,7 @@ export function createRoom(
     phaseTimer: null,
     phaseEndsAt: null,
     voteRunoff: null,
+    lastVoteBreakdown: null,
   };
   const player: Player = {
     sessionId,

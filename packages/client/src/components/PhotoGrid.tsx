@@ -12,17 +12,19 @@ interface Props {
 
 /**
  * Galerija igraca — slika (ili inicijal ako selfie jos nije stigao) + ime,
- * fiksno 2 reda, broj kolona zavisi od broja igraca. Koristi se i za
- * "koga biras" (nocne akcije, glasanje) i za prikaz van diskusije (umesto
- * live videa, dok su kamere ugasene).
+ * najvise 2 reda (do 3 igraca staje u jedan red, jedan pored drugog —
+ * ne jedan ispod drugog), broj kolona zavisi od broja igraca. Koristi se
+ * i za "koga biras" (nocne akcije, glasanje) i za prikaz van diskusije
+ * (umesto live videa, dok su kamere ugasene).
  */
 export default function PhotoGrid({ players, myId, selected, onSelect, showDead = false }: Props) {
-  const columns = Math.max(1, Math.ceil(players.length / 2));
+  const rows = players.length <= 3 ? 1 : 2;
+  const columns = Math.max(1, Math.ceil(players.length / rows));
   return (
     <div
       className="grid gap-2"
       style={{
-        gridTemplateRows: "repeat(2, 1fr)",
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         gridAutoFlow: "column",
       }}

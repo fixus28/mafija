@@ -187,10 +187,25 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
       : alive;
     const candidates = room.voteRunoff ? room.voteRunoff.candidates : alive;
     const voteOutcome = resolveVote(room.votes, eligibleVoters, candidates);
+
+    room.lastVoteBreakdown = [...room.votes.entries()]
+      .filter(([voterId]) => eligibleVoters.includes(voterId))
+      .map(([voterSessionId, targetSessionId]) => ({
+        voterId: room.players.get(voterSessionId)!.publicId,
+        targetId: targetSessionId ? (room.players.get(targetSessionId)?.publicId ?? null) : null,
+      }));
     room.votes = new Map();
 
     if (voteOutcome.status === "tie") {
-      room.voteRunoff = { candidates: voteOutcome.candidates, excludedVoters: voteOutcome.candidates };
+      // Ako bi iskljucivanje izjednacenih ostavilo NIKOG ko sme da glasa
+      // (svi zivi su medju izjednacenima), nema ko drugi da presudi — pusti
+      // i njih da glasaju u reglasavanju, inace bi partija zaglavila u
+      // beskonacnom reglasavanju bez ijednog glasaca.
+      const wouldStrandEveryone = alive.every((id) => voteOutcome.candidates.includes(id));
+      room.voteRunoff = {
+        candidates: voteOutcome.candidates,
+        excludedVoters: wouldStrandEveryone ? [] : voteOutcome.candidates,
+      };
       const names = voteOutcome.candidates
         .map((id) => room.players.get(id)?.name ?? "igrač")
         .join(", ");

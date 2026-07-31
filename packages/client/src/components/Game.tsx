@@ -214,6 +214,25 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
         </section>
       )}
 
+      {room.lastVoteBreakdown && room.lastVoteBreakdown.length > 0 && (
+        <section className="rounded border border-smoke-800 bg-smoke-900 px-4 py-3">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-paper-dim">
+            Ko je za koga glasao (prošlo glasanje)
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1">
+            {room.lastVoteBreakdown.map((v, i) => {
+              const voter = room.players.find((p) => p.id === v.voterId);
+              const target = v.targetId ? room.players.find((p) => p.id === v.targetId) : null;
+              return (
+                <li key={i} className="text-sm text-paper">
+                  {voter?.name ?? "Nepoznat igrač"} → {target ? target.name : "Preskoči"}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {role?.role === "DETECTIVE" && latestDetectiveResults.length > 0 && (
         <section className="rounded border border-brass/30 bg-smoke-900 px-4 py-3">
           <h2 className="text-xs font-medium uppercase tracking-widest text-paper-dim">

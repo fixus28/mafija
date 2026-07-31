@@ -14,13 +14,17 @@ export interface VideoPermission {
  * Kamere/mikrofoni su upaljeni samo tokom dnevne diskusije; utisan igrac
  * zadrzava kameru ali mu je mikrofon iskljucen. Mrtvi nemaju nijedno.
  */
+/** Da li je faza jedna od dve diskusione faze — jedino kad kamere/mikrofoni uopste rade. */
+export function isDiscussionPhase(phase: GamePhase): boolean {
+  return phase === "DAY_DISCUSSION" || phase === "MINI_DISCUSSION";
+}
+
 export function computeVideoPermission(params: {
   phase: GamePhase;
   alive: boolean;
   silenced: boolean;
 }): VideoPermission {
   if (!params.alive) return { camera: false, microphone: false };
-  const discussing = params.phase === "DAY_DISCUSSION" || params.phase === "MINI_DISCUSSION";
-  if (!discussing) return { camera: false, microphone: false };
+  if (!isDiscussionPhase(params.phase)) return { camera: false, microphone: false };
   return { camera: true, microphone: !params.silenced };
 }

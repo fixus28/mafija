@@ -18,15 +18,21 @@ const SOUND_FILES: Record<NarratorSoundId, string> = {
   mafia_wins: "/narrator/mafia-wins.mp3",
 };
 
+/** Ambijentalni "grad spava"/"grad se budi" snimci — prate promenu dan/noc teme. */
+const AMBIENCE_FILES: Record<"day" | "night", string> = {
+  day: "/narrator/day.mp3",
+  night: "/narrator/night.mp3",
+};
+
 /**
- * Pokusava da pusti snimljenu frazu i ceka da se ZAISTA zavrsi (ne samo da
- * pocne) — bitno je da se sledeca fraza u redu (vidi enqueueNarratorAudio)
+ * Pokusava da pusti fajl i ceka da se ZAISTA zavrsi (ne samo da pocne) —
+ * bitno je da sledeca stvar u redu (vidi enqueueNarratorAudio/enqueueAmbience)
  * ne pusti preko ove. Vraca true ako je pustanje uspelo, false ako fajl
  * (jos) ne postoji ili je pustanje odbijeno.
  */
-function playNarratorSound(sound: NarratorSoundId): Promise<boolean> {
+function playFile(src: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const audio = new Audio(SOUND_FILES[sound]);
+    const audio = new Audio(src);
     let settled = false;
     const finish = (ok: boolean) => {
       if (settled) return;
@@ -40,21 +46,26 @@ function playNarratorSound(sound: NarratorSoundId): Promise<boolean> {
 }
 
 /**
- * Naratorove poruke mogu da stignu jedna za drugom u istom trenu (npr.
- * "grad je presudio X" pa odmah "mafija je pobedila" — obe posledica istog
- * glasanja). Ako bismo obe pustili odmah, njihov zvuk bi se preklopio i
- * druga bi ispala "nemuštа". Zato se sve pusta kroz jedan red — sledeca
- * ceka da prethodna STVARNO zavrsi (snimak do kraja ili TTS do kraja).
+ * Naratorove poruke (i ambijentalni prelazi) mogu da stignu jedna za drugom
+ * u istom trenu (npr. "grad je presudio X" pa odmah "mafija je pobedila" —
+ * obe posledica istog glasanja). Ako bismo ih pustili odmah, zvuk bi se
+ * preklopio i druga bi ispala "nemušta". Zato se sve pusta kroz jedan red —
+ * sledeca ceka da prethodna STVARNO zavrsi (snimak do kraja ili TTS do kraja).
  */
 let queue: Promise<void> = Promise.resolve();
 
 export function enqueueNarratorAudio(payload: NarratorMessagePayload): void {
   queue = queue.then(async () => {
     if (payload.sound) {
-      const played = await playNarratorSound(payload.sound);
+      const played = await playFile(SOUND_FILES[payload.sound]);
       if (played) return;
     }
     // Ako snimljena fraza (jos) ne postoji na disku ili je pustanje odbijeno, padamo na TTS.
     await speakNarratorMessage(payload.text);
   });
+}
+
+/** "Grad spava"/"grad se budi" — prati promenu is-night teme, bez TTS fallbacka (nema teksta). */
+export function enqueueAmbience(kind: "day" | "night"): void {
+  queue = queue.then(() => playFile(AMBIENCE_FILES[kind]).then(() => undefined));
 }

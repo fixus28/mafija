@@ -21,3 +21,12 @@ samo sačuvaj sa TAČNO ovim imenom fajla (ekstenziju možeš promeniti u
 
 Dok fajl ne postoji, aplikacija automatski pada na TTS za tu poruku —
 možeš ih dodavati jedan po jedan, ne moraju svi odjednom.
+
+Dva dodatna ambijentalna snimka prate promenu dan/noć teme (ne narator
+liniju, nemaju TTS fallback — ako fajl ne postoji, jednostavno se ne čuje
+ništa):
+
+| Fajl        | Kad se pušta                                    |
+|-------------|--------------------------------------------------|
+| `night.mp3` | Grad zaspi — ulazak u NOĆ                         |
+| `day.mp3`   | Grad se budi — DAWN prelazi u dnevnu diskusiju    |

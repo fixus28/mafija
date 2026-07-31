@@ -51,9 +51,57 @@ body.is-night {
   outline-offset: 2px;
 }
 
+/*
+ * LiveKit podrazumevano stavlja "object-fit: contain" za portret-orijentisane
+ * izvore (cesto slucaj sa prednjim kamerama telefona) — u kvadratnoj plocici
+ * to ostavlja crne trake sa strane umesto da je ceo kvadrat ispunjen slikom.
+ * Zelimo uvek "cover" (isecanje umesto praznine), pa nadjacavamo za oba
+ * slucaja orijentacije.
+ */
+.lk-participant-media-video {
+  object-fit: cover !important;
+}
+
+/* Prelaz dan/noc — dva "kapka" koji se sklope pa razdvoje preko promene teme. */
+.eyelid {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  background: var(--color-smoke-950);
+  z-index: 50;
+  pointer-events: none;
+  animation: eyelid-sweep 1.1s ease-in-out forwards;
+}
+.eyelid-top {
+  top: 0;
+  transform-origin: top;
+}
+.eyelid-bottom {
+  bottom: 0;
+  transform-origin: bottom;
+}
+@keyframes eyelid-sweep {
+  0% {
+    transform: scaleY(0);
+  }
+  40% {
+    transform: scaleY(1);
+  }
+  60% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+  .eyelid {
+    display: none;
   }
 }

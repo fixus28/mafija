@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   DetectiveResultPayload,
   GamePhase,
@@ -6,9 +6,11 @@ import type {
   PublicRoomState,
   RolePayload,
 } from "@mafija/shared";
+import { isDiscussionPhase } from "@mafija/shared";
 import { socket } from "../socket";
 import { useCountdown } from "../useCountdown";
 import { NIGHT_ACTIVE_ROLES, NIGHT_PROMPT, ROLE_DESCRIPTION, ROLE_LABEL } from "../roles";
+import { enqueueAmbience } from "../narratorAudio";
 import VideoRoom from "./VideoRoom";
 import MafiaChannel from "./MafiaChannel";
 
@@ -43,11 +45,25 @@ function formatSeconds(total: number): string {
 
 export default function Game({ room, myId, role, detectiveResults, narratorMessage, onLeave }: Props) {
   const seconds = useCountdown(room.phaseEndsAt);
+  // Eyelid animacija + ambijentalni zvuk na STVARNOJ promeni teme (ne na svaki render/refresh).
+  const wasNightRef = useRef<boolean | null>(null);
+  const [transition, setTransition] = useState(false);
 
   // Grad spava — tamnija pozadina dok traje noc/zora (vraceno kad Game ode iz stabla).
+  // Zvuk i eyelid animacija se pustaju samo na STVARNU promenu (ne pri prvom montiranju/refresh-u usred faze).
   useEffect(() => {
-    document.body.classList.toggle("is-night", NIGHT_LIKE_PHASES.has(room.phase));
+    const isNight = NIGHT_LIKE_PHASES.has(room.phase);
+    document.body.classList.toggle("is-night", isNight);
+    const changed = wasNightRef.current !== null && wasNightRef.current !== isNight;
+    wasNightRef.current = isNight;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (changed) {
+      enqueueAmbience(isNight ? "night" : "day");
+      setTransition(true);
+      timer = setTimeout(() => setTransition(false), 1100);
+    }
     return () => {
+      if (timer) clearTimeout(timer);
       document.body.classList.remove("is-night");
     };
   }, [room.phase]);
@@ -134,8 +150,21 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
     pickerPrompt = "Za koga glasaš?";
   }
 
+  const discussing = isDiscussionPhase(room.phase);
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 px-6 py-10">
+    <main
+      className={`mx-auto flex min-h-screen w-full flex-col gap-6 px-6 py-10 transition-[max-width] duration-300 ${
+        discussing ? "max-w-3xl" : "max-w-md"
+      }`}
+    >
+      {transition && (
+        <>
+          <div className="eyelid eyelid-top" />
+          <div className="eyelid eyelid-bottom" />
+        </>
+      )}
+
       <header className="flex items-baseline justify-between">
         <h1 className="font-display text-2xl font-black text-paper">Mafija</h1>
         <button
@@ -155,7 +184,7 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
         )}
       </div>
 
-      {role && <RoleReminder role={role} />}
+      {role && <RoleReminder role={role} compact={room.phase !== "ROLE_REVEAL"} />}
 
       {pickerPrompt && <p className="text-center text-sm text-paper">{pickerPrompt}</p>}
 
@@ -165,6 +194,19 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
         (role.role === "MAFIA" || role.role === "ACCOMPLICE") &&
         role.partner &&
         room.phase === "NIGHT" && <MafiaChannel />}
+
+      <PhaseStatusPanel
+        room={room}
+        myId={myId}
+        me={me}
+        nightActive={nightActive}
+        nightSent={nightSent}
+        nightError={nightError}
+        voteSkipSelected={voteSkipSelected}
+        voteSent={voteSent}
+        voteError={voteError}
+        onVoteSkip={() => submitVoteTarget(null)}
+      />
 
       {narratorMessage && (
         <section className="rounded border border-smoke-800 bg-smoke-900 px-4 py-3">
@@ -192,24 +234,25 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
           </ul>
         </section>
       )}
-
-      <PhaseStatusPanel
-        room={room}
-        myId={myId}
-        me={me}
-        nightActive={nightActive}
-        nightSent={nightSent}
-        nightError={nightError}
-        voteSkipSelected={voteSkipSelected}
-        voteSent={voteSent}
-        voteError={voteError}
-        onVoteSkip={() => submitVoteTarget(null)}
-      />
     </main>
   );
 }
 
-function RoleReminder({ role }: { role: RolePayload }) {
+/** Van ROLE_REVEAL-a je "compact" — samo sitna traka, da vise prostora ostane video/foto galeriji. */
+function RoleReminder({ role, compact }: { role: RolePayload; compact: boolean }) {
+  if (compact) {
+    return (
+      <section className="flex items-center gap-2 rounded border border-brass/30 bg-smoke-900 px-3 py-1.5">
+        <span className="font-mono text-[0.6rem] uppercase tracking-widest text-brass/70">
+          Uloga:
+        </span>
+        <span className="font-display text-sm font-bold text-paper">{ROLE_LABEL[role.role]}</span>
+        {role.partner && (
+          <span className="text-xs text-seal-bright">· {role.partner.name}</span>
+        )}
+      </section>
+    );
+  }
   return (
     <section className="rounded border border-brass/40 bg-smoke-900 px-4 py-3">
       <p className="font-mono text-[0.6rem] uppercase tracking-widest text-brass/70">

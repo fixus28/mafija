@@ -9,7 +9,12 @@ import {
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Track } from "livekit-client";
-import { computeVideoPermission, type PublicPlayer, type PublicRoomState } from "@mafija/shared";
+import {
+  computeVideoPermission,
+  isDiscussionPhase,
+  type PublicPlayer,
+  type PublicRoomState,
+} from "@mafija/shared";
 import { socket } from "../socket";
 import PhotoGrid from "./PhotoGrid";
 
@@ -26,8 +31,6 @@ interface Props {
   myId: string;
   picker?: PickerConfig;
 }
-
-const DISCUSSING_PHASES = new Set(["DAY_DISCUSSION", "MINI_DISCUSSION"]);
 
 /**
  * Kamera/mikrofon soba preko LiveKit-a — konekcija ostaje otvorena kroz
@@ -60,7 +63,7 @@ export default function VideoRoom({ room, myId, picker }: Props) {
     alive: me?.alive ?? false,
     silenced: room.silencedPlayerId === myId,
   });
-  const discussing = DISCUSSING_PHASES.has(room.phase);
+  const discussing = isDiscussionPhase(room.phase);
 
   if (error) {
     return <p className="text-center text-sm text-seal-bright">{error}</p>;

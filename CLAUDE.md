@@ -252,6 +252,35 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `narratorMessage: string | null`.
   - `Roster` (spisak "Za stolom" na dnu `Game.tsx`) je obrisan — imena
     već stoje ispod fotografija u galeriji.
+- **GOTOVO — treća runda ispravki (izgled/prostor + ambijent):**
+  - **Pravi bag:** LiveKit stavlja `object-fit: contain` za portret-
+    orijentisane izvore (čest slučaj kod prednje kamere telefona), pa je
+    ostajao prazan prostor sa strane u kvadratnoj pločici. Nadjačano u
+    `index.css` (`.lk-participant-media-video { object-fit: cover !important }`)
+    — kamera sad uvek ispunjava celu pločicu (seče se, ne razvlači/prazni).
+  - **Video/foto galerija dobija mnogo više prostora:** `<main>` u
+    `Game.tsx` širi max-width sa `max-w-md` na `max-w-3xl` dok je faza
+    diskusiona (`isDiscussionPhase` — nova deljena funkcija u
+    `shared/src/video.ts`, koristi je i `VideoRoom.tsx`). Na mobilnom
+    nema vidljive razlike (ionako ograničeno širinom ekrana), na širem
+    ekranu su pločice znatno veće.
+  - `RoleReminder` je pun (naslov + opis) samo tokom `ROLE_REVEAL`; u
+    svim ostalim fazama je sitna traka ("ULOGA: Mafija · Radiš sa: X")
+    da ne otima prostor video galeriji — `compact` prop u `Game.tsx`.
+  - Raspored po fazi je preuređen: `PhaseStatusPanel` (dugme "Preskoči"
+    kod glasanja, status "poslato"/greška) sad renderuje ODMAH ispod
+    `VideoRoom`/`MafiaChannel`, PRE narator poruke i policajčevih
+    saznanja — ranije je bio ispod njih, pa je akcija (klik na sliku pa
+    dugme) bila razdvojena informativnim tekstom između.
+  - **Dan/noć ambijent:** dva nova snimka (`day.mp3`/`night.mp3` u
+    `public/narrator/`) puštaju se preko iste `narratorAudio.ts` reda
+    čekanja (nova `enqueueAmbience`) tačno kad `Game.tsx`-ov `is-night`
+    efekat STVARNO promeni stanje (ne pri prvom mount-u/refresh-u usred
+    faze — prati se preko `useRef`). Bez TTS fallbacka (nema teksta).
+  - **Eyelid tranzicija:** dva "kapka" (`div.eyelid-top`/`eyelid-bottom`,
+    `position: fixed`, CSS `@keyframes eyelid-sweep` u `index.css`) se
+    sklope pa razdvoje preko ~1.1s tačno na istu promenu stanja kao
+    ambijentalni zvuk — poštuje `prefers-reduced-motion`.
 - Faza 7: Docker Compose deployment (server+klijent+LiveKit zajedno na VPS-u).
 
 ## Konvencije rada

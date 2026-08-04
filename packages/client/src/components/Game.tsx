@@ -135,7 +135,10 @@ export default function Game({ room, myId, role, detectiveResults, narratorMessa
   let picker: { players: PublicPlayer[]; selected: string | null; onSelect: (id: string) => void } | undefined;
   let pickerPrompt: string | null = null;
   if (nightActive && role) {
-    picker = { players: alivePlayers, selected: nightSelected, onSelect: submitNightTarget };
+    // Policajac ne moze da proverava sebe — nema smisla (uvek bi znao odgovor).
+    const nightPlayers =
+      role.role === "DETECTIVE" ? alivePlayers.filter((p) => p.id !== myId) : alivePlayers;
+    picker = { players: nightPlayers, selected: nightSelected, onSelect: submitNightTarget };
     pickerPrompt = NIGHT_PROMPT[role.role] ?? null;
   } else if (votingActive) {
     const candidateIds = room.runoff?.candidateIds ?? null;

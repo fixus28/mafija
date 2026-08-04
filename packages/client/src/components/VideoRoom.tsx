@@ -16,7 +16,7 @@ import {
   type PublicRoomState,
 } from "@mafija/shared";
 import { socket } from "../socket";
-import PhotoGrid from "./PhotoGrid";
+import PhotoGrid, { PhotoTile } from "./PhotoGrid";
 
 /** Ako je prosledjeno, PhotoGrid van diskusije postaje klikabilna galerija za akciju (nocni cilj/glas)
  * umesto pasivnog prikaza svih igraca — tako nema dve odvojene galerije za istu stvar na ekranu. */
@@ -86,7 +86,7 @@ export default function VideoRoom({ room, myId, picker }: Props) {
       <RoomAudioRenderer />
       <div className="p-2">
         {discussing ? (
-          <LiveVideoGrid />
+          <LiveVideoGrid room={room} myId={myId} />
         ) : (
           <PhotoGrid
             players={picker ? picker.players : room.players}
@@ -154,8 +154,11 @@ function VideoPermissionSync({ camera, microphone }: { camera: boolean; micropho
 /**
  * Uzivo video svih ucesnika — najvise 2 reda, kolone zavise od broja ljudi.
  * Za 1-2 ucesnika je jedan red (jedan pored drugog), ne jedan ispod drugog.
+ * Mrtvi igraci nemaju kameru (computeVideoPermission), pa bi ParticipantTile
+ * za njih prikazao prazan placeholder — umesto toga prikazujemo isti foto+X
+ * kao van diskusije, da bude dosledno.
  */
-function LiveVideoGrid() {
+function LiveVideoGrid({ room, myId }: { room: PublicRoomState; myId: string }) {
   const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], {
     onlySubscribed: false,
   });
@@ -170,14 +173,29 @@ function LiveVideoGrid() {
         gridAutoFlow: "column",
       }}
     >
-      {tracks.map((trackRef) => (
-        <div
-          key={trackRef.participant.identity}
-          className="aspect-square overflow-hidden rounded border border-smoke-700"
-        >
-          <ParticipantTile trackRef={trackRef} />
-        </div>
-      ))}
+      {tracks.map((trackRef) => {
+        const player = room.players.find((p) => p.id === trackRef.participant.identity);
+        if (player && !player.alive) {
+          return (
+            <PhotoTile
+              key={trackRef.participant.identity}
+              player={player}
+              isMe={player.id === myId}
+              selected={false}
+              selectable={false}
+              dead
+            />
+          );
+        }
+        return (
+          <div
+            key={trackRef.participant.identity}
+            className="aspect-square overflow-hidden rounded border border-smoke-700"
+          >
+            <ParticipantTile trackRef={trackRef} />
+          </div>
+        );
+      })}
     </div>
   );
 }

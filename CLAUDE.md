@@ -97,7 +97,12 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
   SVAKE promene broja živih (noćno ubistvo i dnevna eliminacija) — mračni
   ne mogu da umru noću (mafija ne bira sebe za žrtvu), pa ova jedna
   provera pokriva oba uslova iz pravila.
-- Mrtvi igrači = posmatrači (kasnije: kamera i mikrofon trajno ugašeni).
+- Mrtvi igrači = posmatrači (kamera/mikrofon ugašeni; tokom uživo diskusije
+  im se prikazuje foto+X umesto praznog video kvadrata).
+- Glasanje za sebe je zabranjeno (server + UI). Policajac ne sme da
+  proverava sebe (server + UI) — nema smisla, uvek bi znao odgovor.
+  Mafija/dama/lekar SMEJU da biraju sebe za metu svojih moći — namerno,
+  nije bag.
 - `MIN_PLAYERS` je privremeno 4 radi testiranja (`shared/src/constants.ts`);
   podići na 6 (ili 7 da dama uvek bude u igri) pred odbranu.
 
@@ -361,8 +366,21 @@ crveni vosak), `brass` (mesing). Fontovi: Fraunces (display), IBM Plex Sans
     `OverconstrainedError` na `facingMode: "user"` za spoljne/desktop
     kamere koje ga ne prijavljuju, kamera zauzeta drugom aplikacijom...).
     Sledeći put kad se pojavi — otvoriti konzolu (F12) na desktopu.
-
-## Konvencije rada
+- **GOTOVO — zatvorene tri rupe u pravilima + vizuelna doslednost:**
+  - Glasanje za sebe blokirano i na serveru (`submitVote` u
+    `phaseMachine.ts`) — ranije samo UI (`votable` filter) nije puštao,
+    ali izmenjen klijent je mogao da zaobiđe.
+  - Policajac ne sme da proverava sebe — server (`submitNightAction`,
+    poseban slučaj u `DETECTIVE` grani) i klijent (`Game.tsx` izbacuje
+    sebe iz `nightPlayers` SAMO za tu ulogu). Mafija/dama/lekar i dalje
+    slobodno biraju sebe — to je namerno zadržano, potvrđeno testom da
+    se nije slučajno pokvarilo.
+  - Mrtav igrač tokom UŽIVO diskusije sad prikazuje foto+X (isti
+    `PhotoTile` iz `PhotoGrid.tsx`, sad izvezen i deljen) umesto praznog
+    LiveKit placeholder kvadrata — `LiveVideoGrid` u `VideoRoom.tsx` sad
+    prima `room`/`myId` i po `trackRef.participant.identity` (=
+    `publicId`) prepoznaje mrtve igrače pre nego što odluči šta da
+    renderuje po plocici.
 
 - Komentari u kodu na srpskom; objasniti ZAŠTO, ne ŠTA.
 - Poruke o greškama za korisnika konkretne i na srpskom.

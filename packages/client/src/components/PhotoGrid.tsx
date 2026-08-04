@@ -44,7 +44,7 @@ export default function PhotoGrid({ players, myId, selected, onSelect, showDead 
   );
 }
 
-function PhotoTile({
+export function PhotoTile({
   player,
   isMe,
   selected,

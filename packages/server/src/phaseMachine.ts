@@ -334,6 +334,9 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
         room.nightActions.doctorTarget = targetSessionId;
         break;
       case "DETECTIVE":
+        if (targetSessionId === sessionId) {
+          return { ok: false, error: "Ne možeš proveravati samog sebe." };
+        }
         room.nightActions.detectiveTarget = targetSessionId;
         break;
       default:
@@ -361,6 +364,7 @@ export function createGameEngine(io: Server<ClientToServerEvents, ServerToClient
 
     const target = findPlayerByPublicId(room, targetPublicId);
     if (!target || !target.alive) return { ok: false, error: "Meta ne postoji ili nije živa." };
+    if (target.sessionId === sessionId) return { ok: false, error: "Ne možeš glasati za sebe." };
     if (room.voteRunoff && !room.voteRunoff.candidates.includes(target.sessionId)) {
       return { ok: false, error: "U ovom krugu se bira samo između izjednačenih." };
     }
